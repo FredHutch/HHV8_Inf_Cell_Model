@@ -48,7 +48,7 @@ do
     cp ../Test.ttf .
     cp ../$infile .
     rm -f slurm*
-    sbatch -n 1 -t 20:00:00 ../run_first_sets.pl $count2 $infile $critfile $model
+    sbatch -n 1 -t 20:00:00 ../../scripts/run_first_sets.pl $count2 $infile $critfile $model
     cd ..
 
     sets=`expr $sets - 1`

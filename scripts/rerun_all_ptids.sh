@@ -25,8 +25,8 @@ do
     echo "alpha_std 0" >> $ptid\_$model.in
     echo "kappa_std 0" >> $ptid\_$model.in
 
-    ../run_pdf_set.pl 1 $ptid\_$model.in ../high_cohort.crit
-    ../distrib_runs.pl hhv8_sim.dat1 > ../$ptid\_$model.dat1.csv
+    ../../scripts/run_pdf_set.pl 1 $ptid\_$model.in ../high_cohort.crit
+    ../../scripts/distrib_runs.pl hhv8_sim.dat1 > ../$ptid\_$model.dat1.csv
     cd ..
 done
 
