@@ -27,7 +27,7 @@ else
 count2=1
 fi
 
-critfile="../no_betae_high.crit"
+critfile="../high_shedders.crit"
 
 infile="ptid_"
 infile+=$model
@@ -48,7 +48,7 @@ do
     cp ../Test.ttf .
     cp ../ptid_$model.in .
     rm -f slurm*
-    sbatch -n 1 -t 20:00:00 ../run_first_sets.pl $count2 $infile $critfile $model
+    sbatch -n 1 -t 20:00:00 ../../scripts/run_first_sets.pl $count2 $infile $critfile $model
     cd ..
 
     sets=`expr $sets - 1`
