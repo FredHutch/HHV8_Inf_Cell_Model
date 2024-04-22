@@ -27,7 +27,7 @@ else
 count2=1
 fi
 
-critfile="../high_shedders.crit"
+critfile="../../data/high_shedders.crit"
 
 infile="ptid_"
 infile+=$model
@@ -45,7 +45,6 @@ do
     mkdir $thisdir
     fi
     cd $thisdir
-    cp ../Test.ttf .
     cp ../ptid_$model.in .
     rm -f slurm*
     sbatch -n 1 -t 20:00:00 ../../scripts/run_first_sets.pl $count2 $infile $critfile $model

@@ -28,7 +28,7 @@ else
 count2=1
 fi
 
-critfile="../high_shedders.crit"
+critfile="../../data/high_shedders.crit"
 
 infile=$prefix
 infile+="_"
@@ -47,7 +47,6 @@ do
     mkdir $thisdir
     fi
     cd $thisdir
-    cp ../Test.ttf .
     cp ../$prefix\_$model.in $prefix\_$model.in
     rm -f slurm*
     sbatch -n 1 -t 20:00:00 ../../scripts/run_single_set.pl $count2 $infile $critfile $model

@@ -12,7 +12,7 @@ do
     echo "For $ptid ..." >> ptid_runs.log
     cp ptid.in $ptid\_$model.in
 
-    ./shed_scoring.sh $ptid $i $model init_$model.txt
+    ../scripts/shed_scoring.sh $ptid $i $model init_$model.txt
     high=`cut -f82 -d',' top100_$ptid\_$model.csv|head -n 2|tail -n 1`
     low=`cut -f82 -d',' top100_$ptid\_$model.csv|tail -n 1`
     echo "Top 100 scores for $ptid model=$model initially range from $high to $low" >> ptid_runs.log
@@ -29,7 +29,7 @@ do
     do
         echo -n "Launching next set of runs at " >> ptid_runs.log
 	date >> ptid_runs.log
-	./run_next_params.sh $ptid $model 1000
+	../scripts/run_next_params.sh $ptid $model 1000
 	sleep 30
 	running=`squeue -u dswan | wc -l`
 	while [ $running -gt 5 ]
@@ -49,7 +49,7 @@ do
 	fi
 	cat `grep -l "Total Score" set_*/slu*` > $ptid\_$model.txt
 	rm -r set_*/
-	./shed_scoring.sh $ptid $i $model $ptid\_$model.txt
+	../scripts/shed_scoring.sh $ptid $i $model $ptid\_$model.txt
 	high=`cut -f82 -d',' top100_$ptid\_$model.csv|head -n 2|tail -n 1`
 	low=`cut -f82 -d',' top100_$ptid\_$model.csv|tail -n 1`
 	echo "Top 100 scores for $ptid model=$model now range from $high to $low" >> ptid_runs.log

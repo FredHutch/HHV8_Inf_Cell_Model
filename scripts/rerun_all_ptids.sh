@@ -2,6 +2,7 @@
 rm -f single_runs.log
 model=$1
 shift
+critfile="../../data/high_shedders.crit"
 for i in "$@"
 do
     ptid="ptid_""$i"
@@ -12,7 +13,6 @@ do
     fi
     cd $ptid\_$model
     cp ../$ptid\_$model.in .
-    cp ../Test.ttf .
     echo "N_runs 10" >> $ptid\_$model.in
     echo "beta_std 0" >> $ptid\_$model.in
     echo "fpos_std 0" >> $ptid\_$model.in
@@ -25,7 +25,7 @@ do
     echo "alpha_std 0" >> $ptid\_$model.in
     echo "kappa_std 0" >> $ptid\_$model.in
 
-    ../../scripts/run_pdf_set.pl 1 $ptid\_$model.in ../high_cohort.crit
+    ../../scripts/run_pdf_set.pl 1 $ptid\_$model.in $critfile
     ../../scripts/distrib_runs.pl hhv8_sim.dat1 > ../$ptid\_$model.dat1.csv
     cd ..
 done
