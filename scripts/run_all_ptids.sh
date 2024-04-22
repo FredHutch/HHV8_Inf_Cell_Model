@@ -2,6 +2,8 @@
 #rm ptid_runs.log
 model=$1
 shift
+user=$1
+shift
 
 echo "For model $model ..." >> ptid_runs.log
 cp ptid.in ptid_$model.in
@@ -18,7 +20,7 @@ do
     echo "Top 100 scores for $ptid model=$model initially range from $high to $low" >> ptid_runs.log
     cp top100_$ptid\_$model.csv init100_$ptid\_$model.csv
 done
-rm -r set_*/
+rm -r -f set_*/
 
 for i in "$@"
 do
@@ -31,21 +33,21 @@ do
 	date >> ptid_runs.log
 	../scripts/run_next_params.sh $ptid $model 1000
 	sleep 30
-	running=`squeue -u dswan | wc -l`
+	running=`squeue -u $user | wc -l`
 	while [ $running -gt 5 ]
 	do
 	    running=`expr $running - 1`
 	    echo -n "Waiting for $running runs to complete at " >> ptid_runs.log
 	    date >> ptid_runs.log
 	    sleep 30
-	    running=`squeue -u dswan | wc -l`
+	    running=`squeue -u $user | wc -l`
 	done
 	if [ $running -gt 1 ]
 	then
 	    running=`expr $running - 1`
 	    echo -n "Killed $running runs at " >> ptid_runs.log
 	    date >> ptid_runs.log
-	    scancel -u dswan
+	    scancel -u $user
 	fi
 	cat `grep -l "Total Score" set_*/slu*` > $ptid\_$model.txt
 	rm -r set_*/

@@ -4,7 +4,7 @@ ptid=$2
 model=$3
 txtfile=$4
 
-./indiv_rollup.pl $txtfile  ../data/high_shedders.crit ../data/$prefix.crit $ptid > $prefix\_$model.csv
+../scripts/indiv_rollup.pl $txtfile  ../data/high_shedders.crit ../data/$prefix.crit $ptid > $prefix\_$model.csv
 head -n 1 $prefix\_$model.csv > top100_$prefix\_$model.csv
 
 # sort by shed/med hhv8 score
