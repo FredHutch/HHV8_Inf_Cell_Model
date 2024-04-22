@@ -12,38 +12,16 @@
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
 
-PANGOX_LIB = -L$(PANGOX)/lib
-GTKGLEXT_LIB = -L$(GTKGLEXT) -L$(GTKGLEXT)/lib
-GTKGLEXT_INC = -I$(GTKGLEXT)/include -I$(GTKGLEXT)/include/gtkglext-1.0 -I$(GTKGLEXT)/lib/gtkglext-1.0/include
-
 CC            = gcc
 CXX           = g++
 DEFINES       = 
 CFLAGS        = -m64 -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fstack-protector --param=ssp-buffer-size=4 -m64 -mtune=generic -D_REENTRANT -Wall -W $(DEFINES)
-CFLAGS        += "-DGTK_DISABLE_SINGLE_INCLUDES -DGTK_DISABLE_SINGLE_INCLUDES -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED"
-CXXFLAGS      = -m64 -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fstack-protector --param=ssp-buffer-size=4 -m64 -mtune=generic -D_REENTRANT -Wall -W $(DEFINES) -I/usr/include/pango-1.0 `pkg-config --cflags cairo` `pkg-config --cflags pango`
-CXXFLAGS        += "-DGTK_DISABLE_SINGLE_INCLUDES -DGTK_DISABLE_SINGLE_INCLUDES -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED"
-BASE_GTK_INCS = -I$(EBROOTGTKPLUS)/include/gtk-2.0 -I/usr/lib/x86_64-linux-gnu/gtk-2.0/include -I/usr/include/atk-1.0 -I/usr/include/cairo -I/usr/include/pango-1.0 `pkg-config --cflags gdk-3.0` `pkg-config --cflags cairo` `pkg-config --cflags pango` `pkg-config --cflags atk` -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/pixman-1 -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/freetype2 -I/usr/include/libpng12
+CXXFLAGS      = -m64 -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fstack-protector --param=ssp-buffer-size=4 -m64 -mtune=generic -D_REENTRANT -Wall -W $(DEFINES)
 LINK          = g++
 LFLAGS        = -m64 -Wl,-O1
-INCPATH       = -I/usr/include -I../include -I/usr/X11R6/include -I.
-#GUIINCPATH       = $(GTKGLEXT_INC) $(BASE_GTK_INCS) $(INCPATH)
-GUIINCPATH       = $(BASE_GTK_INCS) $(INCPATH)
+INCPATH       = -I/usr/include -I../include -I.
 
-GTKLIBS	      = `pkg-config --libs glib-2.0` $(GTKGLEXT_LIB) $(PANGOX_LIB) -lgtkglext-x11-1.0 -lgdkglext-x11-1.0 -lGLU -lGL  -L/usr/lib/x86_64-linux-gnu \
-		-lXt  -lSM -lICE -Wl,--export-dynamic -lX11 -lgtk-x11-2.0 \
-		-lgdk-x11-2.0 -latk-1.0 -lgio-2.0 -lpangoft2-1.0 -lgdk_pixbuf-2.0 \
-		-lpangocairo-1.0 -lcairo -lpango-1.0 -lfreetype -lfontconfig -lgobject-2.0 \
-		-lgmodule-2.0 -lglib-2.0
-
-GTKLIBS	      = $(GTKGLEXT_LIB) $(PANGOX_LIB) -lgtkglext-x11-1.0 -lgdkglext-x11-1.0 -lGLU -lGL  -L/usr/lib/x86_64-linux-gnu \
-		-lXt  -lSM -lICE -Wl,--export-dynamic -lX11 -lgtk-x11-2.0 \
-		-lgdk-x11-2.0 -latk-1.0 -lgio-2.0 -lpangoft2-1.0 -lgdk_pixbuf-2.0 \
-		-lpangocairo-1.0 -lcairo -lpango-1.0 -lpangox-1.0 -lfreetype -lfontconfig -lgobject-2.0 \
-		-lgmodule-2.0 -lglib-2.0
-
-LIBS          = `pkg-config --libs osmesa` $(PANGOX_LIB) -lpng -lpangocairo-1.0 -lcairo -lpango-1.0 -lfreetype -lfontconfig -lgsl -lgslcblas -lm -lGLU -lGL -lpthread
-GUILIBS          = $(GTKGLEXT_LIB) $(GTKLIBS)  -L/usr/X11R6/lib/x86_64-linux-gnu $(LIBS)
+LIBS          = -lgsl -lgslcblas -lm -lpthread
 
 
 AR            = ar cqs
@@ -64,7 +42,7 @@ MOVE          = mv -f
 CHK_DIR_EXISTS= test -d
 MKDIR         = mkdir -p
 
-all: hhv8_sim hhv8_sim_gui
+all: hhv8_sim
 
 ####### Output directory
 
@@ -78,25 +56,15 @@ HEXOBJ       = hhv8_sim.o hexcell.o
 
 SOURCES       = ../src/hhv8_sim.cpp \
 		../src/hexcell.cpp \
-		../src/plotpoints.cpp \
 		../src/state_var.cpp \
 		../src/zoomin.cpp \
 		../src/global_state.cpp
 
 OBJECTS       = hhv8_sim.o \
 		hexcell.o \
-		plotpoints.o \
 		state_var.o \
 		zoomin.o \
 		global_state.o
-
-GUIOBJS       = hhv8_sim_gui.o \
-		hexcell_gui.o \
-		global_state_gui.o \
-		state_var.o \
-		zoomin.o \
-		plotpoints_gui.o
-
 
 first: all
 ####### Implicit rules
@@ -121,12 +89,6 @@ first: all
 ####### Compile
 
 
-plotpoints.o: ../src/plotpoints.cpp 
-	$(CXX) -c $(CXXFLAGS) -DNO_GUI $(INCPATH) -o plotpoints.o ../src/plotpoints.cpp
-
-plotpoints_gui.o: ../src/plotpoints.cpp 
-	$(CXX) -c $(CXXFLAGS) $(GUIINCPATH) $(INCPATH) -o plotpoints_gui.o ../src/plotpoints.cpp
-
 state_var.o: ../src/state_var.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o state_var.o ../src/state_var.cpp
 
@@ -136,27 +98,17 @@ zoomin.o: ../src/zoomin.cpp
 global_state.o: ../src/global_state.cpp 
 	$(CXX) -c $(CXXFLAGS) -DNO_GUI $(INCPATH) -o global_state.o ../src/global_state.cpp
 
-global_state_gui.o: ../src/global_state.cpp 
-	$(CXX) -c $(CXXFLAGS) $(GUIINCPATH) $(INCPATH) -o global_state_gui.o ../src/global_state.cpp
-
 hexcell.o: ../src/hexcell.cpp
 	$(CXX) -c $(CXXFLAGS) -DNO_GUI $(INCPATH) -o hexcell.o ../src/hexcell.cpp
-hexcell_gui.o: ../src/hexcell.cpp
-	$(CXX) -c $(CXXFLAGS) $(GUIINCPATH) $(INCPATH) -o hexcell_gui.o ../src/hexcell.cpp
 
 
 hhv8_sim.o: ../src/hhv8_sim.cpp
 	$(CXX) -c $(CXXFLAGS) -DNO_GUI $(INCPATH) -o hhv8_sim.o ../src/hhv8_sim.cpp
-hhv8_sim_gui.o: ../src/hhv8_sim.cpp
-	$(CXX) -c $(CXXFLAGS) $(GUIINCPATH) $(INCPATH) -o hhv8_sim_gui.o ../src/hhv8_sim.cpp
 
 
 hhv8_sim:  $(OBJECTS)  
 	$(LINK) $(LFLAGS) -o hhv8_sim $(OBJECTS) $(OBJCOMP) $(LIBS)
-hhv8_sim_gui:  $(GUIOBJS)  
-	$(LINK) $(LFLAGS) -o hhv8_sim_gui $(GUIOBJS) $(OBJCOMP) $(GUILIBS)
 
 
 clean:
 	rm -f hhv8_sim $(OBJECTS)
-

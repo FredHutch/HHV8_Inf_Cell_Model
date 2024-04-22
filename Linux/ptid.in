@@ -25,13 +25,11 @@ Model 5
 Regions 240
 Crit_mask 255
 Match_strategy 3
-plotOpt1 0
 Sig_test 0
 writeOn 0
 yy 1.0
 xx 0.1
 Sampling 0.05
-refresh 0.5
 Param_mask 1
 squeeze 1
 Episode_limit 0

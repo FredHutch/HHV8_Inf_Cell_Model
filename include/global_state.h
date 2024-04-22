@@ -14,10 +14,6 @@
 
 #define NUM_CRITERIA (VL_BINS+EPI_BINS+DUR_BINS)
 
-#define MAX_X 1000
-#define MAX_Y 1000
-#define MAX_Z 1000
-
 #define MAX_TIME          10
 #define MAX_VIRAL_LOAD    10000000000
 #define MAX_INF_CELLS     100000
@@ -28,7 +24,6 @@
 #include <stdio.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
-#include "plotpoints.h"
 #include "hexcell.h"
 
 typedef struct critType {
@@ -239,29 +234,7 @@ class globalState {
    	int Max_y;
    	int Max_z;
 
-   	int plotVi;
-   	int plotVe;
-   	int plotInf;
-   	int plotCd8;
-   	int plotACV;
-
-   	int plotStyle1;
-   	int plotStyle2;
-
-   	int plotLogs;
-   	int plotColor;
-   	int plotRegions;
    	int writeOn;
-   	int scrollAxes;
-
-   	int plotOpt1;
-   	int plotOpt2;
-   	int plotOpt3;
-   	int plotOpt4;
-   	int plotOpt5;
-   	int plotOpt6;
-   	int plotOpt7;
-
  	long int max_vl;
  	long int max_inf;
 	long int max_cd8s;
@@ -269,15 +242,10 @@ class globalState {
 
 	double time;
 	double max_time;
-	double plot_bias;
-	double plot_span;
 	double sampling;
-	double refresh;
 	double hex_time_bias;
 	double crit_start;
 
-	int stopFlag;
-	int pauseFlag;
 	int Verbose;
 	int CritOn;
 
@@ -296,8 +264,6 @@ class globalState {
 	FILE *dataF13;
 
 	long time_st;
-
-	plotPoints *points;
 
  	hexcell **cells;
 
