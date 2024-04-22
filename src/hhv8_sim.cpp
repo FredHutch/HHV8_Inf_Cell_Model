@@ -50,11 +50,6 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_gamma.h>
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include "GL/osmesa.h"
-#include <png.h>
-
 #include "state_var.h"  
 #include "global_state.h"  
 
