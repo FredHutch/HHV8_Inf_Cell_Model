@@ -6,7 +6,7 @@ user=$1
 shift
 
 echo "For model $model ..." >> init_ptid_runs.log
-cp ptid.in ptid_$model.in
+cp ../inputs/ptid.in ptid_$model.in
 
 echo -n "Launching 1st set of runs at " >> init_ptid_runs.log
 date >> init_ptid_runs.log

@@ -6,13 +6,13 @@ user=$1
 shift
 
 echo "For model $model ..." >> ptid_runs.log
-cp ptid.in ptid_$model.in
+cp ../inputs/ptid.in ptid_$model.in
 
 for i in "$@"
 do
     ptid="ptid_""$i"
     echo "For $ptid ..." >> ptid_runs.log
-    cp ptid.in $ptid\_$model.in
+    cp ../inputs/ptid.in $ptid\_$model.in
 
     ../scripts/shed_scoring.sh $ptid $i $model init_$model.txt
     high=`cut -f82 -d',' top100_$ptid\_$model.csv|head -n 2|tail -n 1`
