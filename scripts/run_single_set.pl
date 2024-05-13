@@ -43,10 +43,10 @@ if ( -f $ARGV[2]) {
     exit (1);
 }
 
-if ( $ARGV[3] =~ /^[12345678]$/) {
+if ( $ARGV[3] =~ /^[123456789]/) {
     $model=$ARGV[3]
 } else {
-    die "4th arg is the number of the model (1-8)\n";
+    die "4th arg is the number of the model (1-10)\n";
     exit (1);
 }
 
@@ -64,6 +64,8 @@ my $mean_r;
 my $stddev_r;
 my $mean_beta;
 my $stddev_beta;
+my $mean_betae;
+my $stddev_betae;
 my $mean_latent_inf;
 my $stddev_latent_inf;
 my $mean_exp_days;
@@ -94,6 +96,12 @@ while( $line=<INFILE>) {
 
     } elsif ($pieces[0] eq "beta_std") {
 	$stddev_beta=$pieces[1];
+
+    } elsif ($pieces[0] eq "betae_mean") {
+	$mean_betae=$pieces[1];
+
+    } elsif ($pieces[0] eq "betae_std") {
+	$stddev_betae=$pieces[1];
 
     } elsif ($pieces[0] eq "fpos_mean") {
 	$mean_fpos=$pieces[1];
@@ -141,23 +149,31 @@ while ( $count > 0 ){
 
     open (TSTFILE, ">>$infile");
     printf TSTFILE ("PDF_on 0\n");
-    if ( $model == 2 || $model == 4 || $model == 5 || $model == 8 ) {
-	my $beta= randn($mean_beta,$stddev_beta);
+    my $beta= randn($mean_beta,$stddev_beta);
+    if ( $model > 8 ) {
+	printf TSTFILE ("infect_by_virus 1\n");
 	printf TSTFILE ("beta_init %e\n",$beta);
+    }
+    if ( $model == 2 || $model == 4 || $model == 5 || $model == 8 ) {
+	printf TSTFILE ("beta_init %g\n",$beta);
+    }
+    if ( $model == 10 ){
+	my $betae= randn($mean_betae,$stddev_betae);
+	printf TSTFILE ("beta_init %e\n",$betae);
     }
     if ( $model == 1 || $model == 2 || $model >= 5) {
 	my $fpos= randn($mean_fpos,$stddev_fpos);
 	printf TSTFILE ("fpos %g\n",$fpos);
     }
-    if ( $model == 3 || $model == 4  || $model == 5 || $model == 8) {
+    if ( $model == 3 || $model == 4  || $model == 5 || $model >= 8) {
 	my $an= randn($mean_an,$stddev_an);
 	printf TSTFILE ("an %g\n",$an);
     }
     if ( $model <= 5) {
 	my $alpha= randn($mean_alpha,$stddev_alpha);
 	printf TSTFILE ("alpha_init %g\n",$alpha);
-	my $exp_days= randn($mean_exp_days,$stddev_exp_days);
-	printf TSTFILE ("exp_days_init %g\n",$exp_days);
+	#my $exp_days= randn($mean_exp_days,$stddev_exp_days);
+	#printf TSTFILE ("exp_days_init %g\n",$exp_days);
 	my $r= randn($mean_r,$stddev_r);
 	printf TSTFILE ("r_init %g\n",$r);
     }
@@ -166,7 +182,7 @@ while ( $count > 0 ){
 	my $hill= randn($mean_hill,$stddev_hill);
 	printf TSTFILE ("hill %g\n",$hill);
     }
-    if ( $model == 8) {
+    if ( $model != 6) {
 	printf TSTFILE ("kappa_init 0\n");
     }
     my $log_p= randn($mean_log_p,$stddev_log_p);

@@ -35,6 +35,7 @@ my @tbirths;
 my @all_exp_days;
 my @alphas;
 my @betas;
+my @betaes;
 my @log_ps;
 my @rhos;
 my @fposs;
@@ -60,6 +61,7 @@ my $score3;
 my $alpha;
 my $exp_days;
 my $beta;
+my $betae;
 my $beta_p;
 my $log_p;
 my $rho;
@@ -201,6 +203,9 @@ while( $line=<TXT>) {
     } elsif ($pieces[1] eq "N_runs") {
 	$N_runs=$pieces[3];
 
+    } elsif ($pieces[1] eq "beta_init") {
+	$beta=$pieces[3];
+
     } elsif ($pieces[1] eq "kappa_init") {
 	$kappa=$pieces[3];
 
@@ -236,6 +241,9 @@ while( $line=<TXT>) {
 
     } elsif ($pieces[1] eq "alpha_init") {
 	$alpha=$pieces[3];
+
+    } elsif ($pieces[1] eq "betae_init") {
+	$betae=$pieces[3];
 
     } elsif ($pieces[1] eq "exp_days_init") {
 	$exp_days=$pieces[3];
@@ -399,8 +407,8 @@ while( $line=<TXT>) {
 
 	$scores[$runs]=$score;
 
-	@subpieces = split(/=/,$pieces[4]);
-	$beta = $subpieces[1];
+	#@subpieces = split(/=/,$pieces[4]);
+	#$beta = $subpieces[1];
 
 	@subpieces = split(/=/,$pieces[5]);
 	$latent_inf = $subpieces[1];
@@ -441,6 +449,7 @@ while( $line=<TXT>) {
 	$beta_ps[$runs]=$beta_p;
 	$regs[$runs]=$reg;
 	$alphas[$runs]=$alpha;
+	$betaes[$runs]=$betae;
 	$all_exp_days[$runs]=$exp_days;
     }
 }
@@ -464,9 +473,9 @@ printf (",new_score3,new_score,AIC_k,AIC_score,mean kappa,mean cd8_ic50,total ne
 printf (",old score,shedding,shedding target,shedding score");
 printf (",med log hhv8,med log hhv8 target,med hhv8 score");
 printf (",var log hhv8, var target,var hhv8 score,ptid,exp days,alpha,avg ibirths,avg tbirths");
-printf (",peak log hhv8, peak target,peak hhv8 score,three score\n");
+printf (",peak log hhv8, peak target,peak hhv8 score,three score,betae\n");
 for (my $i=0; $i < $runs; $i++){
-    printf ("%d,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%e,%lf,%lf,%lf,%d,%lf,%lf,%lf,%lf,%lf",
+    printf ("%d,%e,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%e,%lf,%lf,%lf,%d,%lf,%lf,%lf,%lf,%lf",
 	$i+1,$betas[$i],$log_ps[$i],$latent_infs[$i],$thetas[$i],$deltas[$i],$rs[$i],$cs[$i],$rhos[$i],
 	$infs[$i],$rinfs[$i],$eclipses[$i],$hills[$i],$init_T0[$i],$fposs[$i],$ans[$i],$regs[$i],
 	$shedrates[$i],$score1s[$i],$score2s[$i],$score3s[$i],$scores[$i]);
@@ -485,7 +494,7 @@ for (my $i=0; $i < $runs; $i++){
     printf (",%lf",$abs_scores[$i]);
     printf (",%d",$AIC_k[$i]);
     printf (",%lf,%lf,%lf",$AIC_scores[$i],$kappas[$i],$cd8_ic50s[$i]);
-    printf (",%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%d,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf\n",
+    printf (",%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%d,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%e\n",
 	($shedding_scores[$i]+$med_hhv8_scores[$i])/2,
 	($shedding_scores[$i]+$med_hhv8_scores[$i]+$var_hhv8_scores[$i])/3,
         $shedrates[$i],$shedding,$shedding_scores[$i],
@@ -493,5 +502,5 @@ for (my $i=0; $i < $runs; $i++){
 	$var_log_hhv8[$i],$var_hhv8_target,$var_hhv8_scores[$i],$ptid,
 	$all_exp_days[$i],$alphas[$i],$ibirths[$i],$tbirths[$i],
         $peak_log_hhv8[$i],$peak_hhv8_target,$peak_hhv8_scores[$i],
-	($shedding_scores[$i]+$med_hhv8_scores[$i]+$peak_hhv8_scores[$i])/3);
+	($shedding_scores[$i]+$med_hhv8_scores[$i]+$peak_hhv8_scores[$i])/3,$betaes[$i]);
 }

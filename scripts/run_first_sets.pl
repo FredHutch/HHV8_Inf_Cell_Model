@@ -27,10 +27,10 @@ if ( -f $ARGV[2]) {
     die "3rd arg is the criteria file\n";
     exit (1);
 }
-if ( $ARGV[3] =~ /^[12345678]$/) {
+if ( $ARGV[3] =~ /^[123456789]/) {
     $model=$ARGV[3]
 } else {
-    die "4th arg is the number of the model (1-7)\n";
+    die "4th arg is the number of the model (1-9)\n";
     exit (1);
 }
 #an 0.5-2.5
@@ -59,6 +59,15 @@ my $low_beta=1;
 my $high_beta=20;
 my $range_beta= $high_beta-$low_beta;
 
+#Range for betaV 
+my $low_log_vbeta=-7;
+my $high_log_vbeta=-3;
+my $range_log_vbeta= $high_log_vbeta-$low_log_vbeta;
+
+my $low_log_vbetae=-7;
+my $high_log_vbetae=-3;
+my $range_log_vbetae= $high_log_vbetae-$low_log_vbetae;
+
 my $low_log_p=3.5;
 my $high_log_p=7;
 my $range_log_p= $high_log_p-$low_log_p;
@@ -86,6 +95,8 @@ while ( $count > 0 ){
     print "$count runs remaining\n";
 
     my $beta= $range_beta*rand() + $low_beta;
+    my $vbeta= 10**($range_log_vbeta*rand() + $low_log_vbeta);
+    my $vbetae= 10**($range_log_vbetae*rand() + $low_log_vbetae);
     my $fpos= 10**($range_log_fpos*rand() + $low_log_fpos);
     my $hill= 10**($range_log_hill*rand() + $low_log_hill);
     my $log_p= $range_log_p*rand() + $low_log_p;
@@ -97,8 +108,15 @@ while ( $count > 0 ){
 
     open (TSTFILE, ">>$infile");
     printf TSTFILE ("PDF_on 0\n");
+    if ( $model > 8 ) {
+	printf TSTFILE ("infect_by_virus 1\n");
+	printf TSTFILE ("beta_init %e\n",$vbeta);
+    }
     if ( $model == 2 || $model == 4 || $model == 5 || $model == 8) {
-	printf TSTFILE ("beta_init %e\n",$beta);
+	printf TSTFILE ("beta_init %g\n",$beta);
+    }
+    if ( $model == 10) {
+	printf TSTFILE ("betae_init %e\n",$vbetae);
     }
     if ( $model == 1 || $model == 2 || $model >= 5) {
 	printf TSTFILE ("fpos %g\n",$fpos);
@@ -114,7 +132,8 @@ while ( $count > 0 ){
 	printf TSTFILE ("density_killing 1\n");
 	printf TSTFILE ("hill %g\n",$hill);
     }
-    if ( $model == 8 ) {
+    #only model 6 keeps exhaustion
+    if ( $model != 6 ) {
 	printf TSTFILE ("kappa_init 0\n");
     }
     printf TSTFILE ("log_p_init %g\n",$log_p);

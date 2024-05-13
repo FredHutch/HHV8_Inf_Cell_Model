@@ -12,6 +12,7 @@ my @all_scores;
 my @raw_scores;
 my @alpha;
 my @beta;
+my @betae;
 my @latent_inf;
 my @hill;
 my @fpos;
@@ -22,15 +23,18 @@ my @an;
 my @shedding;
 my @ptid;
 
+$line=<TXT>;	# skip header
+
 while( $line=<TXT>) {
     chomp($line);              # remove the newline from $line.
     my @pieces = split(/,/,$line);
 
     if ($num_scores < 100) {
-	$raw_scores[$num_scores]=$pieces[83];
-	$all_scores[$num_scores]=$pieces[83];
+	$raw_scores[$num_scores]=$pieces[81];
+	$all_scores[$num_scores]=$pieces[81];
 	$latent_inf[$num_scores]=$pieces[3];
-        $beta[$num_scores]=$pieces[1];
+	$beta[$num_scores]=$pieces[1];
+	$betae[$num_scores]=$pieces[82];
 	$log_p[$num_scores]=$pieces[2];
 	$an[$num_scores]=$pieces[15];
 	$hill[$num_scores]=$pieces[12];
@@ -48,6 +52,7 @@ while( $line=<TXT>) {
 close(TXT);
 
 my $summed_beta=0;
+my $summed_betae=0;
 my $summed_an=0;
 my $summed_hill=0;
 my $summed_fpos=0;
@@ -61,6 +66,7 @@ my $low_shedders=0;
 for (my $i=0; $i < $num_scores; $i++) {
     #printf STDERR ("Pick %d (val=%g, beta=%g,fpos=%g,lat_inf=%g)\n",$i,$all_scores[$i],$beta[$i],$fpos[$i],$latent_inf[$i]);
     $summed_beta+=$beta[$i];
+    $summed_betae+=$betae[$i];
     $summed_an+=$an[$i];
     $summed_hill+=$hill[$i];
     $summed_fpos+=$fpos[$i];
@@ -79,6 +85,8 @@ for (my $i=0; $i < $num_scores; $i++) {
 }
 my $beta_m= $summed_beta/$num_scores;
 my $beta_sqtotal = 0;
+my $betae_m= $summed_betae/$num_scores;
+my $betae_sqtotal = 0;
 my $an_m= $summed_an/$num_scores;
 my $an_sqtotal = 0;
 my $hill_m= $summed_hill/$num_scores;
@@ -97,6 +105,7 @@ my $alpha_m= $summed_alpha/$num_scores;
 my $alpha_sqtotal = 0;
 for (my $i=0; $i < $num_scores; $i++) {
     $beta_sqtotal += ($beta_m-$beta[$i]) ** 2;
+    $betae_sqtotal += ($betae_m-$betae[$i]) ** 2;
     $an_sqtotal += ($an_m-$an[$i]) ** 2;
     $hill_sqtotal += ($hill_m-$hill[$i]) ** 2;
     $fpos_sqtotal += ($fpos_m-$fpos[$i]) ** 2;
@@ -107,6 +116,9 @@ for (my $i=0; $i < $num_scores; $i++) {
     $alpha_sqtotal += ($alpha_m-$alpha[$i]) ** 2;
 }
 my $beta_s= ($beta_sqtotal / ($num_scores-1)) ** 0.5;
+my $betae_s= ($betae_sqtotal / ($num_scores-1)) ** 0.5;
+my $an_s= ($an_sqtotal / ($num_scores-1)) ** 0.5;
+my $log_p_s= ($log_p_sqtotal / ($num_scores-1)) ** 0.5;
 my $an_s= ($an_sqtotal / ($num_scores-1)) ** 0.5;
 my $log_p_s= ($log_p_sqtotal / ($num_scores-1)) ** 0.5;
 my $hill_s= ($hill_sqtotal / ($num_scores-1)) ** 0.5;
@@ -116,6 +128,9 @@ my $latent_inf_s= ($latent_inf_sqtotal / ($num_scores-1)) ** 0.5;
 my $exp_days_s= ($exp_days_sqtotal / ($num_scores-1)) ** 0.5;
 my $alpha_s= ($alpha_sqtotal / ($num_scores-1)) ** 0.5;
 my @sorted_betas = sort { $a <=> $b } @beta;
+my @sorted_betaes = sort { $a <=> $b } @betae;
+my @sorted_an = sort { $a <=> $b } @an;
+my @sorted_fpos = sort { $a <=> $b } @fpos;
 my @sorted_an = sort { $a <=> $b } @an;
 my @sorted_hill = sort { $a <=> $b } @hill;
 my @sorted_fpos = sort { $a <=> $b } @fpos;
@@ -127,6 +142,7 @@ my @sorted_alpha = sort { $a <=> $b } @alpha;
 printf STDERR ("expand_days: median = %g, mean = %g, stddev = %g\n",$sorted_exp_days[($num_scores/2)],$exp_days_m,$exp_days_s);
 printf STDERR ("alpha: median = %g, mean = %g, stddev = %g\n",$sorted_alpha[($num_scores/2)],$alpha_m,$alpha_s);
 printf STDERR ("beta: median = %g, mean = %g, stddev = %g\n",$sorted_betas[($num_scores/2)],$beta_m,$beta_s);
+printf STDERR ("betae: median = %g, mean = %g, stddev = %g\n",$sorted_betaes[($num_scores/2)],$betae_m,$betae_s);
 printf STDERR ("an: median = %g, mean = %g, stddev = %g\n",$sorted_an[($num_scores/2)],$an_m,$an_s);
 printf STDERR ("hill: median = %g, mean = %g, stddev = %g\n",$sorted_hill[($num_scores/2)],$hill_m,$hill_s);
 printf STDERR ("fpos: median = %g, mean = %g, stddev = %g\n",$sorted_fpos[($num_scores/2)],$fpos_m,$fpos_s);
@@ -144,15 +160,23 @@ if ($high_shedders > 0) {
     printf STDERR ("No high shedders\n");
 }
 printf ("PDF_on 2\n");
+if ( $model > 8) {
+    printf ("beta_mean %e\n",$beta_m);
+    printf ("beta_std %e\n",$beta_s);
+}
 if ( $model == 2 || $model == 4 || $model == 5 || $model == 8) {
     printf ("beta_mean %g\n",$beta_m);
     printf ("beta_std %g\n",$beta_s);
+}
+if ( $model == 10 ) {
+    printf ("betae_mean %e\n",$betae_m);
+    printf ("betae_std %e\n",$betae_s);
 }
 if ( $model == 1 || $model == 2 || $model >= 5) {
     printf ("fpos_mean %g\n",$fpos_m);
     printf ("fpos_std %g\n",$fpos_s);
 }
-if ( $model == 3 || $model == 4 || $model == 5 || $model == 8) {
+if ( $model == 3 || $model == 4 || $model == 5 || $model >= 8) {
     printf ("an_mean %g\n",$an_m);
     printf ("an_std %g\n",$an_s);
 }
@@ -160,15 +184,15 @@ if ( $model == 7) {
     printf ("hill_mean %g\n",$hill_m);
     printf ("hill_std %g\n",$hill_s);
 }
-printf ("exp_days_mean %g\n",$exp_days_m);
-printf ("exp_days_std %g\n",$exp_days_s);
-if ( $model != 6) {
+#printf ("exp_days_mean %g\n",$exp_days_m);
+#printf ("exp_days_std %g\n",$exp_days_s);
+if ( $model <= 5) {
     printf ("alpha_mean %g\n",$alpha_m);
     printf ("alpha_std %g\n",$alpha_s);
     printf ("r_mean %g\n",$r_m);
     printf ("r_std %g\n",$r_s);
 }
-if ( $model == 8) {
+if ( $model != 6) {
     printf ("kappa_mean 0\n");
 }
 printf ("log_p_mean %g\n",$log_p_m);

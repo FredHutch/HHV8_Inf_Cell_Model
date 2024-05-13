@@ -4,6 +4,8 @@ model=$1
 shift
 user=$1
 shift
+sims=$1
+shift
 
 echo "For model $model ..." >> ptid_runs.log
 cp ../inputs/ptid.in ptid_$model.in
@@ -31,7 +33,7 @@ do
     do
         echo -n "Launching next set of runs at " >> ptid_runs.log
 	date >> ptid_runs.log
-	../scripts/run_next_params.sh $ptid $model 1000
+	../scripts/run_next_params.sh $ptid $model $sims
 	sleep 30
 	running=`squeue -u $user | wc -l`
 	while [ $running -gt 5 ]

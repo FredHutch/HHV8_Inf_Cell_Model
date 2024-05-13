@@ -171,7 +171,7 @@ while (length(oneLine <- readLines(ptids, n = 1, warn = FALSE)) > 0) {
     first_line=0
 }
 
-pdf(paste0("model_",model,"_shed_perc_",desc,".pdf"),height=3,width=3)
+pdf(paste0("model_",model,"_shed_perc_",desc,".pdf"),height=2.25,width=2.25)
 
 print("Calculating concordance correlation coefficient for perc positive swabs")
 rho=cor(act_shed_perc, sim_shed_perc)
@@ -198,7 +198,7 @@ ggplot(df, aes(x=x, y=y)) +
 
 dev.off()
 
-pdf(paste0("model_",model,"_hhv8_vl_",desc,".pdf"),height=3,width=3)
+pdf(paste0("model_",model,"_hhv8_vl_",desc,".pdf"),height=2.25,width=2.25)
 
 print("Calculating concordance correlation coefficient for median HHV8 swab")
 rho=cor(act_med_hhv8, sim_med_hhv8)
@@ -225,7 +225,7 @@ ggplot(df, aes(x=x, y=y)) +
 
 dev.off()
 
-pdf(paste0("model_",model,"_hhv8_peak_",desc,".pdf"),height=3,width=3)
+pdf(paste0("model_",model,"_hhv8_peak_",desc,".pdf"),height=2.25,width=2.25)
 
 print("Calculating concordance correlation coefficient for peak HHV8 swab")
 rho=cor(act_max_hhv8, sim_max_hhv8)
