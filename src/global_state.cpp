@@ -9,6 +9,8 @@ using namespace std;
 globalState::globalState(void) 
 {
 	writeOn = 0;
+	infect_by_virus = 0; // Cell-to-cell spread only
+	N0=5e9;
 
 	max_vl = MAX_VIRAL_LOAD;
 	max_inf = MAX_INF_CELLS;
@@ -38,6 +40,12 @@ globalState::globalState(void)
 	alpha_low = 0.01;
 	alpha_mean = 0.01;
 	alpha_std = 0;
+
+	betae_init = 0;
+	betae_high = 0;
+	betae_low = 0;
+	betae_mean = 0;
+	betae_std = 0;
 
 	Max_steps = 1;
 	Stop_walk = 1;

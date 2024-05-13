@@ -37,6 +37,7 @@ class globalState {
 	gsl_rng * ur;
 
 /* set from input file */
+	int infect_by_virus;
 	double TSim;
 	double T0_Sim;
 	double T2_Sim;
@@ -47,12 +48,16 @@ class globalState {
 	double To;
 	double Yo;
 	double Zo;
+	double N0;
 	double exp_days_init;
 	double exp_days_mean;
 	double exp_days_std;
 	double beta_init;
 	double beta_low;
 	double beta_high;
+	double betae_init;
+	double betae_low;
+	double betae_high;
 	double log_p_init;
 	double log_p_low;
 	double log_p_high;
@@ -112,6 +117,8 @@ class globalState {
 	double To_std;
 	double beta_mean;
 	double beta_std;
+	double betae_mean;
+	double betae_std;
 	double latent_inf_mean;
 	double latent_inf_std;
 	double c_mean;
