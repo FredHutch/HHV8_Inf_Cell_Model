@@ -27,10 +27,10 @@ if ( -f $ARGV[2]) {
     die "3rd arg is the criteria file\n";
     exit (1);
 }
-if ( $ARGV[3] =~ /^[123456789]/) {
+if ( $ARGV[3] =~ /^[123]/) {
     $model=$ARGV[3]
 } else {
-    die "4th arg is the number of the model (1-9)\n";
+    die "4th arg is the number of the model (1-3)\n";
     exit (1);
 }
 #an 0.5-2.5
@@ -108,37 +108,35 @@ while ( $count > 0 ){
 
     open (TSTFILE, ">>$infile");
     printf TSTFILE ("PDF_on 0\n");
-    if ( $model > 8 ) {
+    if ( $model > 1 ) {
 	printf TSTFILE ("infect_by_virus 1\n");
 	printf TSTFILE ("beta_init %e\n",$vbeta);
     }
-    if ( $model == 2 || $model == 4 || $model == 5 || $model == 8) {
+    if ( $model == 1) {
+	printf TSTFILE ("infect_by_virus 0\n");
 	printf TSTFILE ("beta_init %g\n",$beta);
     }
-    if ( $model == 10) {
+    if ( $model == 3) {
 	printf TSTFILE ("betae_init %e\n",$vbetae);
     }
-    if ( $model == 1 || $model == 2 || $model >= 5) {
-	printf TSTFILE ("fpos %g\n",$fpos);
-    }
-    if ( $model == 3 || $model == 4 || $model == 5 || $model == 8 ) {
-	printf TSTFILE ("an %g\n",$an);
-    }
-    if ( $model < 6 ) {
-	printf TSTFILE ("r_init %g\n",$r);
-	printf TSTFILE ("alpha_init %g\n",$alpha);
-    }
-    if ( $model == 7 ) {
-	printf TSTFILE ("density_killing 1\n");
-	printf TSTFILE ("hill %g\n",$hill);
-    }
-    #only model 6 keeps exhaustion
-    if ( $model != 6 ) {
-	printf TSTFILE ("kappa_init 0\n");
-    }
+    printf TSTFILE ("fpos %g\n",$fpos);
+    printf TSTFILE ("an %g\n",$an);
+
+    # r and alpha are fixed and not fitted
+    #printf TSTFILE ("r_init %g\n",$r);
+    #printf TSTFILE ("alpha_init %g\n",$alpha);
+
+    # hill coefficient only fit when density dependent innate immunity is modeled
+    #printf TSTFILE ("density_killing 1\n");
+    #printf TSTFILE ("hill %g\n",$hill);
+    #kappa non-zero is for T cell exhaustion
+    printf TSTFILE ("kappa_init 0\n");
     printf TSTFILE ("log_p_init %g\n",$log_p);
     printf TSTFILE ("latent_inf_init %g\n",$latent_inf);
+
+    # exp days limits T cell response (expansion phase in days)
     #printf TSTFILE ("exp_days_init %g\n",$expand_days);
+
     close(TSTFILE);
 
     system("../hhv8_sim -b -r -f $infile -c $critfile");

@@ -15,6 +15,7 @@ my @beta;
 my @betae;
 my @latent_inf;
 my @hill;
+my @kappa;
 my @fpos;
 my @log_p;
 my @exp_days;
@@ -38,6 +39,7 @@ while( $line=<TXT>) {
 	$log_p[$num_scores]=$pieces[2];
 	$an[$num_scores]=$pieces[15];
 	$hill[$num_scores]=$pieces[12];
+	$kappa[$num_scores]=$pieces[60];
 	$fpos[$num_scores]=$pieces[14];
 	$r[$num_scores]=$pieces[6];
 	$ptid[$num_scores]=$pieces[73];
@@ -160,41 +162,42 @@ if ($high_shedders > 0) {
     printf STDERR ("No high shedders\n");
 }
 printf ("PDF_on 2\n");
-if ( $model > 8) {
+if ( $model > 1) {
     printf ("beta_mean %e\n",$beta_m);
     printf ("beta_std %e\n",$beta_s);
 }
-if ( $model == 2 || $model == 4 || $model == 5 || $model == 8) {
+if ( $model == 1) {
     printf ("beta_mean %g\n",$beta_m);
     printf ("beta_std %g\n",$beta_s);
 }
-if ( $model == 10 ) {
+if ( $model == 3 ) {
     printf ("betae_mean %e\n",$betae_m);
     printf ("betae_std %e\n",$betae_s);
 }
-if ( $model == 1 || $model == 2 || $model >= 5) {
-    printf ("fpos_mean %g\n",$fpos_m);
-    printf ("fpos_std %g\n",$fpos_s);
-}
-if ( $model == 3 || $model == 4 || $model == 5 || $model >= 8) {
-    printf ("an_mean %g\n",$an_m);
-    printf ("an_std %g\n",$an_s);
-}
-if ( $model == 7) {
-    printf ("hill_mean %g\n",$hill_m);
-    printf ("hill_std %g\n",$hill_s);
-}
+printf ("fpos_mean %g\n",$fpos_m);
+printf ("fpos_std %g\n",$fpos_s);
+
+printf ("an_mean %g\n",$an_m);
+printf ("an_std %g\n",$an_s);
+
+#uncomment if fitting to density dependent killing
+#printf ("hill_mean %g\n",$hill_m);
+#printf ("hill_std %g\n",$hill_s);
+
+#uncomment if fitting T cell expansion days
 #printf ("exp_days_mean %g\n",$exp_days_m);
 #printf ("exp_days_std %g\n",$exp_days_s);
-if ( $model <= 5) {
-    printf ("alpha_mean %g\n",$alpha_m);
-    printf ("alpha_std %g\n",$alpha_s);
-    printf ("r_mean %g\n",$r_m);
-    printf ("r_std %g\n",$r_s);
-}
-if ( $model != 6) {
-    printf ("kappa_mean 0\n");
-}
+
+#uncomment if fitting r and alpha
+#printf ("alpha_mean %g\n",$alpha_m);
+#printf ("alpha_std %g\n",$alpha_s);
+#printf ("r_mean %g\n",$r_m);
+#printf ("r_std %g\n",$r_s);
+
+#uncomment if fitting T cell exhaustion
+#printf ("kappa_mean %g\n",$kappa_m);
+#printf ("kappa_std %g\n",$kappa_s);
+printf ("kappa_mean 0\n");
 printf ("log_p_mean %g\n",$log_p_m);
 printf ("log_p_std %g\n",$log_p_s);
 printf ("latent_inf_mean %g\n",$latent_inf_m);

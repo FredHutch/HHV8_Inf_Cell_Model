@@ -43,10 +43,10 @@ if ( -f $ARGV[2]) {
     exit (1);
 }
 
-if ( $ARGV[3] =~ /^[123456789]/) {
+if ( $ARGV[3] =~ /^[123]/) {
     $model=$ARGV[3]
 } else {
-    die "4th arg is the number of the model (1-10)\n";
+    die "4th arg is the number of the model (1-3)\n";
     exit (1);
 }
 
@@ -109,6 +109,12 @@ while( $line=<INFILE>) {
     } elsif ($pieces[0] eq "fpos_std") {
 	$stddev_fpos=$pieces[1];
 
+    } elsif ($pieces[0] eq "kappa_mean") {
+	$mean_kappa=$pieces[1];
+
+    } elsif ($pieces[0] eq "kappa_std") {
+	$stddev_kappa=$pieces[1];
+
     } elsif ($pieces[0] eq "hill_mean") {
 	$mean_hill=$pieces[1];
 
@@ -150,41 +156,39 @@ while ( $count > 0 ){
     open (TSTFILE, ">>$infile");
     printf TSTFILE ("PDF_on 0\n");
     my $beta= randn($mean_beta,$stddev_beta);
-    if ( $model > 8 ) {
+    if ( $model == 1 ) {
+	printf TSTFILE ("infect_by_virus 0\n");
+	printf TSTFILE ("beta_init %g\n",$beta);
+    }
+    if ( $model > 1 ) {
 	printf TSTFILE ("infect_by_virus 1\n");
 	printf TSTFILE ("beta_init %e\n",$beta);
     }
-    if ( $model == 2 || $model == 4 || $model == 5 || $model == 8 ) {
-	printf TSTFILE ("beta_init %g\n",$beta);
-    }
-    if ( $model == 10 ){
+    if ( $model == 3 ){
 	my $betae= randn($mean_betae,$stddev_betae);
 	printf TSTFILE ("beta_init %e\n",$betae);
     }
-    if ( $model == 1 || $model == 2 || $model >= 5) {
-	my $fpos= randn($mean_fpos,$stddev_fpos);
-	printf TSTFILE ("fpos %g\n",$fpos);
-    }
-    if ( $model == 3 || $model == 4  || $model == 5 || $model >= 8) {
-	my $an= randn($mean_an,$stddev_an);
-	printf TSTFILE ("an %g\n",$an);
-    }
-    if ( $model <= 5) {
-	my $alpha= randn($mean_alpha,$stddev_alpha);
-	printf TSTFILE ("alpha_init %g\n",$alpha);
-	#my $exp_days= randn($mean_exp_days,$stddev_exp_days);
-	#printf TSTFILE ("exp_days_init %g\n",$exp_days);
-	my $r= randn($mean_r,$stddev_r);
-	printf TSTFILE ("r_init %g\n",$r);
-    }
-    if ( $model == 7) {
-	printf TSTFILE ("density_killing 1\n");
-	my $hill= randn($mean_hill,$stddev_hill);
-	printf TSTFILE ("hill %g\n",$hill);
-    }
-    if ( $model != 6) {
-	printf TSTFILE ("kappa_init 0\n");
-    }
+    my $fpos= randn($mean_fpos,$stddev_fpos);
+    printf TSTFILE ("fpos %g\n",$fpos);
+    my $an= randn($mean_an,$stddev_an);
+    printf TSTFILE ("an %g\n",$an);
+
+    # r and alpha are fixed
+    #my $alpha= randn($mean_alpha,$stddev_alpha);
+    #printf TSTFILE ("alpha_init %g\n",$alpha);
+    #my $r= randn($mean_r,$stddev_r);
+    #printf TSTFILE ("r_init %g\n",$r);
+
+    #uncomment if fitting with density dependent killing
+    #printf TSTFILE ("density_killing 1\n");
+    #my $hill= randn($mean_hill,$stddev_hill);
+    #printf TSTFILE ("hill %g\n",$hill);
+
+    #uncomment if fitting with T cell exhaustion term
+    #my $kappa= randn($mean_kappa,$stddev_kappa);
+    #printf TSTFILE ("kappa %g\n",$kappa);
+    printf TSTFILE ("kappa_init 0\n");
+
     my $log_p= randn($mean_log_p,$stddev_log_p);
     printf TSTFILE ("log_p_init %g\n",$log_p);
     my $latent_inf= randn($mean_latent_inf,$stddev_latent_inf);
