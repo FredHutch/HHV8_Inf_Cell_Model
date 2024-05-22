@@ -166,7 +166,7 @@ while ( $count > 0 ){
     }
     if ( $model == 3 ){
 	my $betae= randn($mean_betae,$stddev_betae);
-	printf TSTFILE ("beta_init %e\n",$betae);
+	printf TSTFILE ("betae_init %e\n",$betae);
     }
     my $fpos= randn($mean_fpos,$stddev_fpos);
     printf TSTFILE ("fpos %g\n",$fpos);
