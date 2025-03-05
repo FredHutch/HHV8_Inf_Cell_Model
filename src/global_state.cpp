@@ -36,39 +36,25 @@ globalState::globalState(void)
 	hill_std = 0;
 
 	alpha_init = 0.01;
-	alpha_high = 0.01;
-	alpha_low = 0.01;
 	alpha_mean = 0.01;
 	alpha_std = 0;
 
 	betae_init = 0;
-	betae_high = 0;
-	betae_low = 0;
 	betae_mean = 0;
 	betae_std = 0;
 
-	Max_steps = 1;
-	Stop_walk = 1;
-	Bvstop_walk = 1;
-	Printmax = 1;
-	Tolerance = 0.1;
-	Threading = 25;
-	Fit_model = 1;
-	Rand_start = 1;
 	Calc_T0 = 1;
 	Model = 5;
 	Regions = 300;
 	Crit_mask = 255;
 	Match_strategy = 2;
 	Tdelay_on = 0;
-	Search_order = 0;
 	Pulse_regions = 0;
 	Cluster_pulses = 0;
 	infThreshold = 10;
 	Sig_test = 0;
 	writeOn = 0;
 	yy = 1.0;
-	Param_mask = 1;
 	Episode_limit = 0;
 	Verbose = 0;
 	Episode_limit=0;
@@ -95,7 +81,6 @@ globalState::globalState(void)
 	dataF12 = NULL;
 	dataF13 = NULL;
 
-	Param_mask=0;
 	Input_refresh=0;
 	inp_file=NULL;
 	alt_inp_file=NULL;
@@ -105,8 +90,6 @@ globalState::globalState(void)
 	Model_3 = 0;
 	CritOn = 1;
 	crit_start = 0;
-	AutoSnapshot=0;
-	SnapshotInterval=5;
 
 	Total_epis = 0;
 	T0_files = 10;

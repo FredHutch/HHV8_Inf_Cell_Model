@@ -21,7 +21,7 @@ LINK          = g++
 LFLAGS        = -m64 -Wl,-O1
 INCPATH       = -I/usr/include -I../include -I.
 
-LIBS          = -lgsl -lgslcblas -lm -lpthread
+LIBS          = -lgsl -lgslcblas -lm
 
 
 AR            = ar cqs
@@ -57,13 +57,11 @@ HEXOBJ       = hhv8_sim.o hexcell.o
 SOURCES       = ../src/hhv8_sim.cpp \
 		../src/hexcell.cpp \
 		../src/state_var.cpp \
-		../src/zoomin.cpp \
 		../src/global_state.cpp
 
 OBJECTS       = hhv8_sim.o \
 		hexcell.o \
 		state_var.o \
-		zoomin.o \
 		global_state.o
 
 first: all
@@ -91,9 +89,6 @@ first: all
 
 state_var.o: ../src/state_var.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o state_var.o ../src/state_var.cpp
-
-zoomin.o: ../src/zoomin.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o zoomin.o ../src/zoomin.cpp
 
 global_state.o: ../src/global_state.cpp 
 	$(CXX) -c $(CXXFLAGS) -DNO_GUI $(INCPATH) -o global_state.o ../src/global_state.cpp

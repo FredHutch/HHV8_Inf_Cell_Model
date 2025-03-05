@@ -46,7 +46,6 @@
 #include <stdexcept>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
-#include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_gamma.h>
 
@@ -74,9 +73,7 @@ using namespace std;
 #define MAX_SWABS 10000
 
 static globalState *theState=NULL;
-static int batchMode;
 static int stoch;
-static int drawnTime = 0;
 
 static string outDir;
 
@@ -89,7 +86,6 @@ void abort_(const char * s, ...)
         va_end(args);
         abort();
 }
-static int simLock = 0;
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 
@@ -272,14 +268,14 @@ int pick_neighbor(int cellIndex, globalState *vars)
  * 	model 6 - ACV 
  * 	model 7 - ACV & 
  */
-bool model5 (int inT0, double time, state_var* Sp, state_var* Ssub[], 
+bool model5 (double time, state_var* Sp, state_var* Ssub[], 
 	state_var* Ec[], state_var* Ip[], 
 	state_var* Tp[], gsl_matrix *pastTps, 
 	state_var* Vi[], state_var*  Ve[], 
 	state_var*  Veadj[], unsigned int *Iplaquebirths, 
 	int *totalPlaques, int plaqColors[], 
-	gsl_vector *params, globalState *vars, 
-	double Repro[], double logRepro[], double p, double latent_inf, int *lastColor, 
+	globalState *vars, 
+	double Repro[], double logRepro[], double p, double latent_inf, 
 	state_var* Vethis[], state_var* Vithis[], state_var* Ithis[],state_var* Id_this[], double start_inf_time[],
 	double *repro_max,
 	double *repro_mean,
@@ -299,7 +295,7 @@ bool model5 (int inT0, double time, state_var* Sp, state_var* Ssub[],
 	unsigned long int *VethisTot, int selectedRegions[]) 
 {
         double tstep;   
-	double db, beta, beta_e, beta_un, hill, fpos,  theta, FIp, FInf, delta, c, 
+	double db, beta, beta_e, hill, fpos,  theta, FIp, FInf, delta, c, 
 		rho, r, an, inf, rinf, eclipse, cd8_ic50, alpha, kappa, expand_days; 
 	double N0, decline;
 
@@ -310,8 +306,6 @@ bool model5 (int inT0, double time, state_var* Sp, state_var* Ssub[],
 
 	long int Videlta;
 	unsigned long int Visaved;
-
-	unsigned long int Ve_Death, Ve_Inf, Tcell_Death;
 
 	unsigned long int Iptot, Vetot, Vitot;
 
@@ -334,17 +328,17 @@ bool model5 (int inT0, double time, state_var* Sp, state_var* Ssub[],
 
 	/* NOTE: latent_inf and p passed in to allow for drug effects (in models 6 & 7) */
 
-	beta=gsl_vector_get(params,0);
-	c=gsl_vector_get(params,3);
-	theta=gsl_vector_get(params,4);
-	inf=gsl_vector_get(params,5);
-	r=gsl_vector_get(params,6);
-	rinf=gsl_vector_get(params,7);
-	delta=gsl_vector_get(params,8);
-	beta_e=gsl_vector_get(params,9);
-	rho=gsl_vector_get(params,10);
-	eclipse=gsl_vector_get(params,11);
-	beta_un=pow(10.,gsl_vector_get(params,12));
+	beta=vars->beta_init;
+	p = pow(10,vars->log_p_init);
+	c=vars->c_init;
+	theta=vars->theta_init;
+	inf=vars->inf_init;
+	r=vars->r_init;
+	rinf=vars->rinf_init;
+	delta=vars->delta_init;
+	beta_e=vars->betae_init;
+	rho=vars->rho_init;
+	eclipse=vars->eclipse_init;
 
 ////////////////////////////////////////////////////////////////////////
 // update time-dependent parameters
@@ -688,7 +682,7 @@ bool model5 (int inT0, double time, state_var* Sp, state_var* Ssub[],
 	//
 	// Virus, extracellular (Ve and Veadj)
 	//
-	unsigned int AdjDeath, AdjInf;
+	unsigned int AdjDeath;
 
 	for (int i =0; i < vars->Regions; i++)
 	{
@@ -868,13 +862,6 @@ bool model5 (int inT0, double time, state_var* Sp, state_var* Ssub[],
 	return true;
 }
 
-int zoomin(double (*F)( int *,gsl_vector *,void *,FILE *),gsl_rng *r,
-    gsl_vector *params,double *Max,
-    gsl_vector *low_bound,gsl_vector *high_bound,
-    int param_mask, int max_params,
-    int max_steps,int stop_walk,int bvstop_walk,
-    int print, double tolerance,void *data, int threaded, int searchOrder);
-
 inline double shed_cpy (int n)
 {return pow(10.,n);} 
 inline unsigned int shedbin (unsigned int VL)
@@ -1033,45 +1020,25 @@ void read_input_file(int refresh, char *inp_file, globalState *vars)
     SET_OPT_PARAMETER("N0",N0);
 
     SET_OPT_PARAMETER("alpha_init",alpha_init);
-    SET_OPT_PARAMETER("alpha_low",alpha_low);
-    SET_OPT_PARAMETER("alpha_high",alpha_high);
     SET_OPT_PARAMETER("alpha_mean",alpha_mean);
     SET_OPT_PARAMETER("alpha_std",alpha_std);
 
     SET_PARAMETER("beta_init",beta_init);
-    SET_PARAMETER("beta_low",beta_low);
-    SET_PARAMETER("beta_high",beta_high);
     SET_PARAMETER("log_p_init",log_p_init);
     SET_PARAMETER("log_p_low",log_p_low);
     SET_PARAMETER("log_p_high",log_p_high);
     SET_PARAMETER("latent_inf_init",latent_inf_init);
-    SET_PARAMETER("latent_inf_low",latent_inf_low);
-    SET_PARAMETER("latent_inf_high",latent_inf_high);
     SET_PARAMETER("theta_init",theta_init);
-    SET_PARAMETER("theta_low",theta_low);
-    SET_PARAMETER("theta_high",theta_high);
     SET_PARAMETER("r_init",r_init);
-    SET_PARAMETER("r_low",r_low);
-    SET_PARAMETER("r_high",r_high);
     SET_PARAMETER("delta_init",delta_init);
-    SET_PARAMETER("delta_low",delta_low);
-    SET_PARAMETER("delta_high",delta_high);
     SET_PARAMETER("c_init",c_init);
-    SET_PARAMETER("c_low",c_low);
-    SET_PARAMETER("c_high",c_high);
     SET_PARAMETER("inf_init",inf_init);
-    SET_PARAMETER("inf_low",inf_low);
-    SET_PARAMETER("inf_high",inf_high);
     SET_PARAMETER("inf_mean",inf_mean);
     SET_PARAMETER("inf_std",inf_std);
     SET_PARAMETER("rinf_init",rinf_init);
-    SET_PARAMETER("rinf_low",rinf_low);
-    SET_PARAMETER("rinf_high",rinf_high);
     SET_PARAMETER("rinf_mean",rinf_mean);
     SET_PARAMETER("rinf_std",rinf_std);
     SET_PARAMETER("rho_init",rho_init);
-    SET_PARAMETER("rho_low",rho_low);
-    SET_PARAMETER("rho_high",rho_high);
     SET_PARAMETER("db",db);
     SET_PARAMETER("To_mean",To_mean);
     SET_PARAMETER("To_std",To_std);
@@ -1081,27 +1048,17 @@ void read_input_file(int refresh, char *inp_file, globalState *vars)
     SET_OPT_PARAMETER("hill",hill);
     SET_PARAMETER("swabInterval",swabInterval);
     SET_OPT_PARAMETER("statInterval",statInterval);
-    SET_OPT_PARAMETER("Tolerance",Tolerance);
 
     SET_OPT_INT_PARAMETER("del1",del1);
     SET_OPT_INT_PARAMETER("Tdelay_on",Tdelay_on);
     SET_INT_PARAMETER("Tmin",Tmin);
     SET_INT_PARAMETER("N_runs",N_runs);
-    SET_OPT_INT_PARAMETER("Max_steps",Max_steps);
-    SET_OPT_INT_PARAMETER("Param_mask",Param_mask);
-    SET_OPT_INT_PARAMETER("Stop_walk",Stop_walk);
-    SET_OPT_INT_PARAMETER("Bvstop_walk",Bvstop_walk);
-    SET_OPT_INT_PARAMETER("Printmax",Printmax);
-    SET_OPT_INT_PARAMETER("Threading",Threading);
 
-    SET_OPT_INT_PARAMETER("Fit_model",Fit_model);
-    SET_OPT_INT_PARAMETER("Rand_start",Rand_start);
     SET_INT_PARAMETER("Calc_T0",Calc_T0);
     SET_INT_PARAMETER("writeOn",writeOn);
     SET_INT_PARAMETER("Regions",Regions);
     SET_INT_PARAMETER("Crit_mask",Crit_mask);
     SET_INT_PARAMETER("Match_strategy",Match_strategy);
-    SET_OPT_INT_PARAMETER("Search_order",Search_order);
     SET_OPT_INT_PARAMETER("Episode_limit",Episode_limit);
     SET_OPT_PARAMETER("Size_limit",Size_limit);
     SET_OPT_PARAMETER("crit_start",crit_start);
@@ -1125,14 +1082,7 @@ void read_input_file(int refresh, char *inp_file, globalState *vars)
 	SET_OPT_INT_PARAMETER("Sig_test",Sig_test);
 	SET_OPT_INT_PARAMETER("yy",yy);
 	SET_OPT_PARAMETER("betae_init",betae_init);
-	SET_OPT_PARAMETER("betae_low",betae_low);
-	SET_OPT_PARAMETER("betae_high",betae_high);
-	SET_PARAMETER("log_betaun_init",log_betaun_init);
-	SET_PARAMETER("log_betaun_low",log_betaun_low);
-	SET_PARAMETER("log_betaun_high",log_betaun_high);
 	SET_PARAMETER("eclipse_init",eclipse_init);
-	SET_PARAMETER("eclipse_low",eclipse_low);
-	SET_PARAMETER("eclipse_high",eclipse_high);
     }
     if (vars->Model >= 5) 
     {
@@ -1142,22 +1092,18 @@ void read_input_file(int refresh, char *inp_file, globalState *vars)
 	SET_PARAMETER("gamma_low",gamma_low);
 	SET_PARAMETER("gamma_mean",gamma_mean);
 	SET_PARAMETER("Cmax_init",Cmax_init);
-	SET_PARAMETER("Cmax_high",Cmax_high);
-	SET_PARAMETER("Cmax_low",Cmax_low);
 	SET_PARAMETER("Cmax_mean",Cmax_mean);
 	SET_OPT_PARAMETER("Cmax_0",Cmax_0);
 	SET_PARAMETER("IC50_init",IC50_init);
-	SET_PARAMETER("IC50_high",IC50_high);
-	SET_PARAMETER("IC50_low",IC50_low);
 	SET_PARAMETER("IC50_mean",IC50_mean);
 	SET_PARAMETER("m_init",m_init);
-	SET_PARAMETER("m_high",m_high);
 	SET_PARAMETER("m_low",m_low);
+	SET_PARAMETER("m_high",m_high);
 	SET_PARAMETER("m_mean",m_mean);
 	SET_PARAMETER("bolus",bolus);
 	SET_PARAMETER("absorb_init",absorb_init);
-	SET_PARAMETER("absorb_high",absorb_high);
 	SET_PARAMETER("absorb_low",absorb_low);
+	SET_PARAMETER("absorb_high",absorb_high);
 	SET_PARAMETER("absorb_mean",absorb_mean);
 
 	SET_OPT_INT_PARAMETER("absorb_hrs",absorb_hrs);
@@ -1179,8 +1125,6 @@ void read_input_file(int refresh, char *inp_file, globalState *vars)
 
 	SET_PARAMETER("cd8_ic50_mean",cd8_ic50_mean);
 	SET_PARAMETER("cd8_ic50_init",cd8_ic50_init);
-	SET_PARAMETER("cd8_ic50_low",cd8_ic50_low);
-	SET_PARAMETER("cd8_ic50_high",cd8_ic50_high);
 	SET_PARAMETER("cd8_ic50_std",cd8_ic50_std);
 
 	SET_OPT_PARAMETER("exp_days_init",exp_days_init);
@@ -1188,8 +1132,6 @@ void read_input_file(int refresh, char *inp_file, globalState *vars)
 	SET_OPT_PARAMETER("exp_days_std",exp_days_std);
 
 	SET_PARAMETER("kappa_init",kappa_init);
-	SET_PARAMETER("kappa_low",kappa_low);
-	SET_PARAMETER("kappa_high",kappa_high);
 	SET_PARAMETER("kappa_mean",kappa_mean);
 	SET_PARAMETER("kappa_std",kappa_std);
 
@@ -1234,7 +1176,7 @@ void scaleTcells(state_var* Tp[], double scaleFactor, bool globally, globalState
 
 /* This function returns a"score" for the simulations runs based on a given
  * set of parameter values (for now this is the % of 50 criteria in 95% CI ranges */
-double ScoreFunction(int *valid, gsl_vector *ParamVector,
+double ScoreFunction(int *valid, 
 	void *data, FILE *results)
 { 
     double score =0.;
@@ -1245,15 +1187,13 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 
     globalState *vars = (globalState *)data;
 
-    static int printCount = vars->Printmax;
-
     int Nepis = 10000;
 
     double shed_thresh=100.; /* level of detection for virus shedding episode */
 
     int model;
 
-    double Size_limit, Episode_limit, T1Sim, T0_Sim;
+    double Episode_limit, T1Sim, T0_Sim;
     double TSim, tstep, timep, period_p;
 
     double swabT=0., max_T=0., First_T=0., Last_T=0.,cont_First_T=0.;
@@ -1265,11 +1205,8 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     double totPlaques[Nepis]; 
 
     double episodDur[Nepis], 
-	    First_VL[Nepis], 
-	    Last_VL[Nepis], 
 	    maxFirstReg[Nepis];
 
-    double cont_episodDur[Nepis]; 
     double period_episodDur[Nepis]; 
 
     double Repro[MAX_HEXCELLS];
@@ -1277,7 +1214,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     double ReproMax[MAX_HEXCELLS];
     double ReproMin[MAX_HEXCELLS];
 	    
-    double ViOnset[MAX_HEXCELLS];
     double ViLifeMax[MAX_HEXCELLS];
     double ViLifeMin[MAX_HEXCELLS];
     double ViLifeSpan;
@@ -1286,15 +1222,10 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     int criteria1[VL_BINS];
     double crit1perc[VL_BINS];
 
-    double minCrit1Perc=100.;
-    double maxCrit1Perc=0.;
-    double avgCrit1Perc=0.;
-
     int peaks[EPI_BINS];
     int criteria2[EPI_BINS];
     double crit2perc[EPI_BINS];
 
-    int dur_cats[DUR_BINS];
     int criteria3[DUR_BINS];
     double crit3perc[DUR_BINS];
 
@@ -1314,18 +1245,16 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     unsigned long int iThisAtPeak[MAX_HEXCELLS];
 
     double timeAtGlobalPeak=-1;
-    double timeAtGlobalStart=-1;
 
 
-    int VL_bin, epiD_bin, maxVL_bin;
+    int VL_bin, maxVL_bin;
 
-    double beta, beta_e, theta, beta_un, delta, c, r, latent_inf, p, avgVL; 
+    double beta, beta_e, theta, delta, c, r, latent_inf, p, avgVL; 
     double rho, inf, rinf, eclipse;
 
     unsigned long int pastVL;
     unsigned long int currentVL=0;
     unsigned long int measuredVL;
-    unsigned long int past_measuredVL;
 
     unsigned long int  T0=0;
     unsigned long int  I0=0;
@@ -1340,7 +1269,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 
     int totalEpis;
     int cont_totalEpis;
-    int period_totalEpis;
     int totalSwabs;
     int totalPosSwabs;
     int posSwabs;
@@ -1351,13 +1279,10 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     double patSwabMeds[Nepis];	// Track median pos swab VL for each patient (report avg)
     double patSwabVars[Nepis];	// Track variance of swabs for each patient (report avg)
 
-    double totSwabs[MAX_SWABS];
     double totPosSwabs[MAX_SWABS];
     double totPeaks[MAX_SWABS];
     double totDurations[MAX_SWABS];
     double thisPosSwabs[MAX_SWABS];
-
-    double avgEpisYr;
 
     double time_in_days;
     double total_stats_time = 0;
@@ -1376,11 +1301,8 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     state_var *Ithis[MAX_HEXCELLS], *Vithis[MAX_HEXCELLS], *Vethis[MAX_HEXCELLS];
     state_var *Id_this[MAX_HEXCELLS];
 
-    unsigned long int Iun_p = 0;
-
     double *actArray;
 
-    int transmissions=0;
     int episodeStop=0;
 
     int totalPlaques; /* plaques generated by an episode */
@@ -1417,7 +1339,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     int epi_1mm = 0;
     int epi_2mm = 0;
 
-    double swab_over_1 = 0;
     double time_over_1 = 0;
     double time_over_2 = 0;
 
@@ -1441,7 +1362,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     unsigned long int maxStartRegionVe = 0;	/* max extracellular virons in start region */
     double maxStartTime = 0;	
 
-    int lastColor; /* tracks last color used when color tiling plaques */
     int firstRegion; /* tracks region 1st infected for an episode */
     int infRegions=0; /* used when threshold is set */
 
@@ -1517,7 +1437,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     /* set state variables using passed state */
 
     Episode_limit = vars->Episode_limit; 
-    Size_limit = vars->Size_limit; 
     tstep = vars->tstep;
     N_runs = vars->N_runs;
     Total_epis = vars->Total_epis;
@@ -1533,43 +1452,40 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     actArray = (double *)malloc(N_runs*sizeof(double));
 
     /* set parameters using passed param vector */
-    beta=gsl_vector_get(ParamVector,0);
-    latent_inf=gsl_vector_get(ParamVector,1);
-    p=pow(10.,gsl_vector_get(ParamVector,2));
-    c=gsl_vector_get(ParamVector,3);
-    theta=gsl_vector_get(ParamVector,4);
-    inf=gsl_vector_get(ParamVector,5);
-    r=gsl_vector_get(ParamVector,6);
-    rinf=gsl_vector_get(ParamVector,7);
-    delta=gsl_vector_get(ParamVector,8);
-    beta_e=gsl_vector_get(ParamVector,9);
-    rho=gsl_vector_get(ParamVector,10);
-    eclipse=gsl_vector_get(ParamVector,11);
-    beta_un=pow(10.,gsl_vector_get(ParamVector,12));
+    beta=vars->beta_init;
+    latent_inf=vars->latent_inf_init;
+    p = pow(10,vars->log_p_init);
+    c=vars->c_init;
+    theta=vars->theta_init;
+    inf=vars->inf_init;
+    r=vars->r_init;
+    rinf=vars->rinf_init;
+    delta=vars->delta_init;
+    beta_e=vars->betae_init;
+    rho=vars->rho_init;
+    eclipse=vars->eclipse_init;
 
     if (vars->Model >= 5) /* get drug related params */
     {
-	Cmax=gsl_vector_get(ParamVector,13);
-	IC50=gsl_vector_get(ParamVector,14);
-	m=gsl_vector_get(ParamVector,15);
+	Cmax=vars->Cmax_init;
+	IC50=vars->IC50_init;
+	m=vars->m_init;
 	if (vars->gamma_hrs)
-	    gamma=1.0 / (gsl_vector_get(ParamVector,16)/ 24.);
+	    gamma=log(2) / (vars->gamma_init/ 24.);
 	else
-	    gamma=gsl_vector_get(ParamVector,16); 
+	    gamma=log(2)/vars->gamma_init; 
 
 	if (vars->absorb_hrs)
-	    absorb=(gsl_vector_get(ParamVector,17)/ 24.);
+	    absorb=(vars->absorb_init/ 24.);
 	else
-	    absorb=gsl_vector_get(ParamVector,17); 
+	    absorb=vars->absorb_init; 
 
 	bolus = vars->bolus;
-
 	if (vars->Cmax_0 == 0.0)
 	    Cmax_0 = 0.0;
 	else
 	    Cmax_0 = vars->Cmax_0;
     }
-    
 
     pastTps=gsl_matrix_alloc(vars->Regions,del1);
 
@@ -1751,55 +1667,34 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		}
 	    }
 
-	    /* reset parameter vectors incase any changed */
-	    gsl_vector_set(ParamVector,0,vars->beta_init); 
-	    gsl_vector_set(ParamVector,1,vars->latent_inf_init); 
-	    gsl_vector_set(ParamVector,2,vars->log_p_init); 
-	    gsl_vector_set(ParamVector,3,vars->c_init); 
-	    gsl_vector_set(ParamVector,4,vars->theta_init); 
-	    gsl_vector_set(ParamVector,5,vars->inf_init); 
-	    gsl_vector_set(ParamVector,6,vars->r_init); 
-	    gsl_vector_set(ParamVector,7,vars->rinf_init); 
-	    gsl_vector_set(ParamVector,8,vars->delta_init); 
-	    gsl_vector_set(ParamVector,9,vars->betae_init); 
-	    gsl_vector_set(ParamVector,10,vars->rho_init); 
-	    gsl_vector_set(ParamVector,11,vars->eclipse_init); 
+	    beta=vars->beta_init;
+	    latent_inf=vars->latent_inf_init;
+	    p = pow(10,vars->log_p_init);
+	    c=vars->c_init;
+	    theta=vars->theta_init;
+	    inf=vars->inf_init;
+	    r=vars->r_init;
+	    rinf=vars->rinf_init;
+	    delta=vars->delta_init;
+	    beta_e=vars->betae_init;
+	    rho=vars->rho_init;
+	    eclipse=vars->eclipse_init;
 
-
-	    /* set parameters using passed param vector */
-	    beta=gsl_vector_get(ParamVector,0);
-	    latent_inf=gsl_vector_get(ParamVector,1);
-	    p=pow(10.,gsl_vector_get(ParamVector,2));
-	    c=gsl_vector_get(ParamVector,3);
-	    theta=gsl_vector_get(ParamVector,4);
-	    inf=gsl_vector_get(ParamVector,5);
-	    r=gsl_vector_get(ParamVector,6);
-	    rinf=gsl_vector_get(ParamVector,7);
-	    delta=gsl_vector_get(ParamVector,8);
-	    beta_e=gsl_vector_get(ParamVector,9);
-	    rho=gsl_vector_get(ParamVector,10);
-	    eclipse=gsl_vector_get(ParamVector,11);
 
 	    if (vars->Model > 5) /* adjust drug related params */
 	    {
-		gsl_vector_set(ParamVector,13,vars->Cmax_init); 
-		gsl_vector_set(ParamVector,14,vars->IC50_init); 
-		gsl_vector_set(ParamVector,15,vars->m_init); 
-		gsl_vector_set(ParamVector,16,vars->gamma_init); 
-		gsl_vector_set(ParamVector,17,vars->absorb_init); 
-
-		Cmax=gsl_vector_get(ParamVector,13);
-		IC50=gsl_vector_get(ParamVector,14);
-		m=gsl_vector_get(ParamVector,15);
+		Cmax=vars->Cmax_init;
+		IC50=vars->IC50_init;
+		m=vars->m_init;
 		if (vars->gamma_hrs)
-		    gamma=1.0 / (gsl_vector_get(ParamVector,16) / 24.);
+		    gamma=log(2) / (vars->gamma_init/ 24.);
 		else
-		    gamma=gsl_vector_get(ParamVector,16); 
+		    gamma=log(2)/vars->gamma_init; 
 
 		if (vars->absorb_hrs)
-		    absorb=(gsl_vector_get(ParamVector,17)/ 24.);
+		    absorb=(vars->absorb_init/ 24.);
 		else
-		    absorb=gsl_vector_get(ParamVector,17); 
+		    absorb=vars->absorb_init; 
 
 		bolus = vars->bolus;
 		if (vars->Cmax_0 == 0.0)
@@ -1820,13 +1715,10 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	if (vars->Calc_T0 < 0)
 	{
 	    int randfile=(int)gsl_rng_uniform_int(vars->ur,T0_files);
-	    if (vars->Calc_T0 == -1)
-		sprintf(t0_file, "%s.%x.%d",t0_default,pthread_self(),randfile);
-	    else
-		sprintf(t0_file, "%s.%d",t0_default,randfile);
+	    sprintf(t0_file, "%s.%d",t0_default,randfile);
 	}
 
-	if ((!batchMode || vars->Calc_T0 <= 0 || vars->Calc_T0==3) && 
+	if ((vars->Calc_T0 <= 0 || vars->Calc_T0==3) && 
 		(t0Fp = fopen (t0_file,"r")) != NULL)
 	{
 	    char *cp = NULL;
@@ -1899,11 +1791,9 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		}
 		time_in_days=0.; 
 		stats_time=0.; 
-		swab_over_1=0.; 
 		time_over_1=0.; 
 		time_over_2=0.; 
 		swabT=0.;
-		lastColor=0;
 		VethisTot = 0;
 		VithisTot = 0;
 		IthisTot = 0;
@@ -1917,7 +1807,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		newInfevents=0;
 		newVirons=0;
 		Itot_p = 0;
-		Iun_p = 0;
 
 		if (vars->Model >= 4)
 		{
@@ -1954,11 +1843,11 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		    {
 			if (vars->Model_0 == 4 || vars->Model_0 == 5)
 			{
-			    if (!model5(1,time_in_days,Sp, Ssub, Ec, Ip, 
+			    if (!model5(time_in_days,Sp, Ssub, Ec, Ip, 
 				    Tp, pastTps, Vi, Ve, 
 				    Veadj, &Iplaquebirths, &totalPlaques,
-				    plaqColors, ParamVector, vars, 
-				    Repro, logRepro, p, latent_inf,&lastColor,
+				    plaqColors, vars, 
+				    Repro, logRepro, p, latent_inf,
 				    Vethis, Vithis, Ithis, Id_this, start_inf_time,
 				    &repro_max, &repro_mean, &log_repro_mean,
 				    &repro_std, &log_repro_std,
@@ -1994,10 +1883,10 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			    else
 				latent_inf_ACV = latent_inf;
 
-			    if (!model5(1,time_in_days,Sp, Ssub, Ec, Ip, 
+			    if (!model5(time_in_days,Sp, Ssub, Ec, Ip, 
 				    Tp, pastTps, Vi, Ve, Veadj, &Iplaquebirths, 
-				    &totalPlaques, plaqColors, ParamVector, vars, 
-				    Repro,logRepro,p_ACV,latent_inf_ACV,&lastColor,
+				    &totalPlaques, plaqColors, vars, 
+				    Repro,logRepro,p_ACV,latent_inf_ACV,
 				    Vethis, Vithis, Ithis, Id_this, start_inf_time,
 				    &repro_max, &repro_mean, &log_repro_mean,
 				    &repro_std, &log_repro_std,
@@ -2029,10 +1918,10 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			    p_ACV = p * factor; 
 			    latent_inf_ACV = latent_inf * factor;
 
-			    if (!model5(1,time_in_days,Sp, Ssub, Ec, Ip, 
+			    if (!model5(time_in_days,Sp, Ssub, Ec, Ip, 
 				    Tp, pastTps, Vi, Ve, Veadj, &Iplaquebirths, 
-				    &totalPlaques, plaqColors, ParamVector, vars, 
-				    Repro,logRepro,p_ACV,latent_inf_ACV,&lastColor,
+				    &totalPlaques, plaqColors, vars, 
+				    Repro,logRepro,p_ACV,latent_inf_ACV,
 				    Vethis, Vithis, Ithis, Id_this, start_inf_time,
 				    &repro_max, &repro_mean, &log_repro_mean,
 				    &repro_std, &log_repro_std,
@@ -2065,7 +1954,7 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			fprintf(stderr,
 			    "[%d]: Calculated T0=%lu (after %lf days)\n",
 			    Nr_count,T0,time_in_days);
-		    if (vars->Fit_model == 0 || vars->Calc_T0 < 0)
+		    if (vars->Calc_T0 < 0)
 		    {
 			if( (t0Fp = fopen(t0_file,"wt")) == NULL){
 			    cerr << "Could not open T0 file "<<t0_file<<" for writing.\n";
@@ -2077,7 +1966,7 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			    fclose(t0Fp);
 			    time(&time_t0);
 			    if (vars->Verbose > 1)
-				fprintf(stderr,"(thread : wrote T0 file %s (elapsed=%ld)\n",
+				fprintf(stderr,"(wrote T0 file %s (elapsed=%ld)\n",
 					t0_file,time_t0-vars->time_st);
 			}
 		    }
@@ -2130,7 +2019,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	    Veadj[j]->initialz_with(0); 
 	}
 	ACV = 0;
-	lastColor=0;
 	VethisTot = 0;
 	VithisTot = 0;
 	IthisTot = 0;
@@ -2175,7 +2063,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	totalPlaques=0;
 	infTot=0;
 	infGlobalMax=0;
-	timeAtGlobalStart=0;
 	firstRegion = -1;
 
 	if (vars->Model >= 4)
@@ -2200,10 +2087,7 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	{
 	    maxVL[i] = 0;
 	    maxFirstReg[i] = 0.;
-	    First_VL[i] = 0.;
-	    Last_VL[i] = 0.;
 	    episodDur[i] = 0.;
-	    cont_episodDur[i] = 0.;
 	    period_episodDur[i] = 0.;
 	    totPlaques[i] = 0.;
 	}
@@ -2238,11 +2122,9 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	//propagating in time loop
 	swabT=0;
 	pastVL = 0.;
-	past_measuredVL = 0.;
 	swabsThisEpi=0;
 
 	bool inEpisode=false;
-	bool inEpisode_p=false;
 	bool any_neg=false;
 	double max_dur = 0;
 	Iplaquebirths=0;
@@ -2252,7 +2134,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	for (int j=0; j <vars->Regions; j++) {
 	    ReproMax[j] = 0;
 	    ReproMin[j] = 100.;
-	    ViOnset[j] = 0;
 	    ViLifeMax[j] = 0;
 	    ViLifeMin[j] = 100.;
 	}
@@ -2335,48 +2216,47 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		fprintf(vars->dataF9,"Global peak time,");
 		fprintf(vars->dataF9,"Ibirth at local peak\n");
 	    }
+	    if (vars->dataF10 != NULL) 
+	    {
+		fprintf(vars->dataF10,"episode,");
+		fprintf(vars->dataF10,"duration,");
+		fprintf(vars->dataF10,"overall peak,");
+		fprintf(vars->dataF10,"plaques,");
+		fprintf(vars->dataF10,"first region peak\n");
+	    }
 	    if (vars->dataF11 != NULL) 
 	    {
-		fprintf(vars->dataF11,"episode,");
-		fprintf(vars->dataF11,"duration,");
-		fprintf(vars->dataF11,"overall peak,");
-		fprintf(vars->dataF11,"plaques,");
-		fprintf(vars->dataF11,"first region peak\n");
+		fprintf(vars->dataF11,"time,");
+		fprintf(vars->dataF11,"T_max");
+		fprintf(vars->dataF11,",T_tot");
+		fprintf(vars->dataF11,",Ve_max");
+		fprintf(vars->dataF11,",Ve_tot");
+		fprintf(vars->dataF11,",R_max");
+		fprintf(vars->dataF11,",R_mean");
+		fprintf(vars->dataF11,",R_stddev");
+		fprintf(vars->dataF11,"\n");
 	    }
 	    if (vars->dataF12 != NULL) 
 	    {
-		fprintf(vars->dataF12,"time,");
-		fprintf(vars->dataF12,"T_max");
-		fprintf(vars->dataF12,",T_tot");
-		fprintf(vars->dataF12,",Ve_max");
-		fprintf(vars->dataF12,",Ve_tot");
-		fprintf(vars->dataF12,",R_max");
-		fprintf(vars->dataF12,",R_mean");
-		fprintf(vars->dataF12,",R_stddev");
+		fprintf(vars->dataF12,"time");
+		fprintf(vars->dataF12,",model");
+		fprintf(vars->dataF12,",bolus");
+		fprintf(vars->dataF12,",doses");
+		fprintf(vars->dataF12,",ACV");
+		fprintf(vars->dataF12,",Infus");
+		fprintf(vars->dataF12,",lastBolus");
+		fprintf(vars->dataF12,",p");
+		fprintf(vars->dataF12,",p_ACV");
+		fprintf(vars->dataF12,",latent_inf");
+		fprintf(vars->dataF12,",latent_inf_ACV");
+		fprintf(vars->dataF12,",vet");
 		fprintf(vars->dataF12,"\n");
-	    }
-	    if (vars->dataF13 != NULL) 
-	    {
-		fprintf(vars->dataF13,"time");
-		fprintf(vars->dataF13,",model");
-		fprintf(vars->dataF13,",bolus");
-		fprintf(vars->dataF13,",doses");
-		fprintf(vars->dataF13,",ACV");
-		fprintf(vars->dataF13,",Infus");
-		fprintf(vars->dataF13,",lastBolus");
-		fprintf(vars->dataF13,",p");
-		fprintf(vars->dataF13,",p_ACV");
-		fprintf(vars->dataF13,",latent_inf");
-		fprintf(vars->dataF13,",latent_inf_ACV");
-		fprintf(vars->dataF13,",vet");
-		fprintf(vars->dataF13,"\n");
 	    }
 	}
 
 	int sig_episodes=0;
 	infTot=0;
 	infGlobalMax=0;
-	bool episodeAtStart = false;
 
 	firstPass=1;
 	// Read I0 values from saved file (if available)
@@ -2485,12 +2365,12 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			vars->alt_inp_file,time_in_days);
 		if (vars->Model > 5)
 		    fprintf(results,
-			"beta=%e latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf beta_un=%lfe-11 ,absorb=%lf, gamma=%lf,Cmax=%lf,IC50=%lf,m=%lf,time=%lf\n",
-			beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,beta_un*1.0e11,absorb,gamma,Cmax,IC50,m,stats_time);
+			"beta=%e latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf,absorb=%lf, gamma=%lf,Cmax=%lf,IC50=%lf,m=%lf,time=%lf\n",
+			beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,absorb,gamma,Cmax,IC50,m,stats_time);
 		else
 		    fprintf(results,
-			"To=%lf,beta=%e latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf beta_un=%lfe-11 ,time=%lf\n",
-			vars->To,beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,beta_un*1.0e11,stats_time);
+			"To=%lf,beta=%e latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf ,time=%lf\n",
+			vars->To,beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,stats_time);
 
 		read_input_file(1, vars->alt_inp_file,vars);
 
@@ -2602,54 +2482,33 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		fprintf(results,"After Reading ...\n");
 
 		/* reset parameter vectors incase any changed */
-		gsl_vector_set(ParamVector,0,vars->beta_init); 
-		gsl_vector_set(ParamVector,1,vars->latent_inf_init); 
-		gsl_vector_set(ParamVector,2,vars->log_p_init); 
-		gsl_vector_set(ParamVector,3,vars->c_init); 
-		gsl_vector_set(ParamVector,4,vars->theta_init); 
-		gsl_vector_set(ParamVector,5,vars->inf_init); 
-		gsl_vector_set(ParamVector,6,vars->r_init); 
-		gsl_vector_set(ParamVector,7,vars->rinf_init); 
-		gsl_vector_set(ParamVector,8,vars->delta_init); 
-		gsl_vector_set(ParamVector,9,vars->betae_init); 
-		gsl_vector_set(ParamVector,10,vars->rho_init); 
-		gsl_vector_set(ParamVector,11,vars->eclipse_init); 
-		gsl_vector_set(ParamVector,12,vars->log_betaun_init); 
-		/* set parameters using passed param vector */
-		beta=gsl_vector_get(ParamVector,0);
-		latent_inf=gsl_vector_get(ParamVector,1);
-		p = pow(10,gsl_vector_get(ParamVector,2));
-		c=gsl_vector_get(ParamVector,3);
-		theta=gsl_vector_get(ParamVector,4);
-		inf=gsl_vector_get(ParamVector,5);
-		r=gsl_vector_get(ParamVector,6);
-		rinf=gsl_vector_get(ParamVector,7);
-		delta=gsl_vector_get(ParamVector,8);
-		beta_e=gsl_vector_get(ParamVector,9);
-		rho=gsl_vector_get(ParamVector,10);
-		eclipse=gsl_vector_get(ParamVector,11);
-		beta_un=pow(10,gsl_vector_get(ParamVector,12));
+		beta=vars->beta_init;
+		latent_inf=vars->latent_inf_init;
+		p = pow(10,vars->log_p_init);
+		c=vars->c_init;
+		theta=vars->theta_init;
+		inf=vars->inf_init;
+		r=vars->r_init;
+		rinf=vars->rinf_init;
+		delta=vars->delta_init;
+		beta_e=vars->betae_init;
+		rho=vars->rho_init;
+		eclipse=vars->eclipse_init;
 
 		if (vars->Model > 5) /* get drug related params */
 		{
-		    gsl_vector_set(ParamVector,13,vars->Cmax_init); 
-		    gsl_vector_set(ParamVector,14,vars->IC50_init); 
-		    gsl_vector_set(ParamVector,15,vars->m_init); 
-		    gsl_vector_set(ParamVector,16,vars->gamma_init); 
-		    gsl_vector_set(ParamVector,17,vars->absorb_init); 
-
-		    Cmax=gsl_vector_get(ParamVector,13);
-		    IC50=gsl_vector_get(ParamVector,14);
-		    m=gsl_vector_get(ParamVector,15);
+		    Cmax=vars->Cmax_init;
+		    IC50=vars->IC50_init;
+		    m=vars->m_init;
 		    if (vars->gamma_hrs)
-			gamma=1.0 / (gsl_vector_get(ParamVector,16) / 24.);
+			gamma=log(2) / (vars->gamma_init/ 24.);
 		    else
-			gamma=gsl_vector_get(ParamVector,16); 
+			gamma=log(2)/vars->gamma_init; 
 
 		    if (vars->absorb_hrs)
-			absorb=(gsl_vector_get(ParamVector,17)/ 24.);
+			absorb=(vars->absorb_init/ 24.);
 		    else
-			absorb=gsl_vector_get(ParamVector,17); 
+			absorb=vars->absorb_init; 
 
 		    bolus = vars->bolus;
 		    if (vars->Cmax_0 == 0.0)
@@ -2659,12 +2518,12 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		}
 		if (vars->Model > 5)
 		    fprintf(results,
-			"beta=%lf latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf beta_un=%lfe-11 ,absorb=%lf, gamma=%lf,Cmax=%lf,IC50=%lf,m=%lf\n",
-			beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,beta_un*1.0e11,absorb,gamma,Cmax,IC50,m);
+			"beta=%lf latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf absorb=%lf, gamma=%lf,Cmax=%lf,IC50=%lf,m=%lf\n",
+			beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,absorb,gamma,Cmax,IC50,m);
 		else
 		    fprintf(results,
-			"To=%lf,beta=%lf latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf beta_un=%lfe-11 \n",
-			vars->To,beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,beta_un*1.0e11);
+			"To=%lf,beta=%lf latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf \n",
+			vars->To,beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse);
 	    }
 	    /* should be outside of an episode (pastVL < shed_thresh)*/
 
@@ -2745,10 +2604,10 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		for (int j=0; j <vars->Regions; j++)
 		    pastVL += Ve[j]->val();
 
-		if (!model5(0,time_in_days,Sp, Ssub, Ec,Ip,Tp,pastTps,  
+		if (!model5(time_in_days,Sp, Ssub, Ec,Ip,Tp,pastTps,  
 			Vi, Ve, Veadj, &Iplaquebirths, &totalPlaques, plaqColors, 
-			ParamVector, vars, Repro,logRepro,p,
-			latent_inf,&lastColor,
+			vars, Repro,logRepro,p,
+			latent_inf,
 			Vethis, Vithis, Ithis, Id_this, start_inf_time,
 			&repro_max, &repro_mean, &log_repro_mean,
 			&repro_std, &log_repro_std,
@@ -2793,10 +2652,10 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		else
 		    latent_inf_ACV = latent_inf;
 
-		if (!model5(0,time_in_days,Sp, Ssub, Ec,Ip,Tp,pastTps,  
+		if (!model5(time_in_days,Sp, Ssub, Ec,Ip,Tp,pastTps,  
 			Vi, Ve, Veadj, &Iplaquebirths, &totalPlaques, plaqColors, 
-			ParamVector, vars, Repro,logRepro,p_ACV,
-			latent_inf_ACV,&lastColor,
+			vars, Repro,logRepro,p_ACV,
+			latent_inf_ACV,
 			Vethis, Vithis, Ithis, Id_this, start_inf_time,
 			&repro_max, &repro_mean, &log_repro_mean,
 			&repro_std, &log_repro_std,
@@ -2834,10 +2693,10 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		p_ACV = p * factor; 
 		latent_inf_ACV = latent_inf * factor;
 
-		if (!model5(0,time_in_days,Sp, Ssub, Ec,Ip,Tp,pastTps,  
+		if (!model5(time_in_days,Sp, Ssub, Ec,Ip,Tp,pastTps,  
 			Vi, Ve, Veadj, &Iplaquebirths, &totalPlaques, plaqColors, 
-			ParamVector, vars, Repro,logRepro,p_ACV,
-			latent_inf_ACV,&lastColor,
+			vars, Repro,logRepro,p_ACV,
+			latent_inf_ACV,
 			Vethis, Vithis, Ithis, Id_this, start_inf_time,
 			&repro_max, &repro_mean, &log_repro_mean,
 			&repro_std, &log_repro_std,
@@ -2898,20 +2757,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			ViLifeMax[j] = ViLifeSpan;
 		    if (ViLifeMin[j] > ViLifeSpan)
 			ViLifeMin[j] = ViLifeSpan;
-    #ifdef OLDWAY
-		    if (ViOnset[j] > 0 && Vi[j]->val() == 0) {
-			if (ViLifeMax[j] < time_in_days - ViOnset[j])
-			    ViLifeMax[j] = time_in_days - ViOnset[j];
-			if (ViLifeMin[j] > time_in_days - ViOnset[j])
-			    ViLifeMin[j] = time_in_days - ViOnset[j];
-		    }
-		    if (ViOnset[j] == 0 && Vi[j]->val() > 0)
-			ViOnset[j] = time_in_days;
-		    if ( Vi[j]->val() == 0)
-		    {
-			ViOnset[j] = 0;
-		    }
-    #endif
 
 		    if ( Vi[j]->val() == 0)
 		    {
@@ -3138,7 +2983,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	    {
 		double err=0;
 		double global_mean=(double)cd8size/vars->Regions;
-		timeAtGlobalStart = time_in_days;
 		if (vars->Verbose > 1)
 		    fprintf(results,"At infection start (t=%lf), vet=(%lu), Tcell total=%lu\n",time_in_days,vet,cd8size);
 		for (int j=0; j <vars->Regions; j++)
@@ -3234,14 +3078,9 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			pre_Tp[j]->initialz_with(Tp[j]->val());
 		    }
 		    //first of episode
-		    First_VL[counter] = measuredVL;
 		    First_T = time_in_days;
 
 		    inEpisode=true;
-
-		    if (vars->Calc_T0 == 2 && 
-			(First_T - 1.5*vars->swabInterval < T0_Sim || First_T - 1.5*tstep <  T0_Sim))
-			episodeAtStart = true;
 
 		    for (int j=0; j <vars->Regions; j++)
 		    {
@@ -3296,13 +3135,13 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		    if (vars->writeOn && abs(model) >= 4 &&
 		       (vars->Calc_T0 != 2 || time_in_days > T0_Sim))
 		    {
-			if (vars->dataF11 != NULL) {
-			    fprintf(vars->dataF11,"%d,",counter);
-			    fprintf(vars->dataF11,"%lf,",episodDur[counter]);
-			    fprintf(vars->dataF11,"%lu,",maxVL[counter]);
-			    fprintf(vars->dataF11,"%lf,",totPlaques[counter]);
-			    fprintf(vars->dataF11,"%lf,",maxFirstReg[counter]);
-			    fprintf(vars->dataF11,"\n");
+			if (vars->dataF10 != NULL) {
+			    fprintf(vars->dataF10,"%d,",counter);
+			    fprintf(vars->dataF10,"%lf,",episodDur[counter]);
+			    fprintf(vars->dataF10,"%lu,",maxVL[counter]);
+			    fprintf(vars->dataF10,"%lf,",totPlaques[counter]);
+			    fprintf(vars->dataF10,"%lf,",maxFirstReg[counter]);
+			    fprintf(vars->dataF10,"\n");
 			}
 		    }
 
@@ -3319,7 +3158,7 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			long time_now;
 			time(&time_now);
 			if (vars->Verbose)
-			    fprintf(stderr,"(thread : Patient %d hit %d episodes at t=%lf (elapsed=%ld)\n",
+			    fprintf(stderr,"(Patient %d hit %d episodes at t=%lf (elapsed=%ld)\n",
 				Nr_count,counter,time_in_days,time_now-vars->time_st);
 			pcounter = 0;
 		    }
@@ -3369,16 +3208,8 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 		{
 		    swabs[0]++;
 		}
-		past_measuredVL = measuredVL;
 		if (vars->CritOn && time_in_days >= vars->crit_start)
 		{
-		    if (measuredVL > 0)
-		    {
-			totSwabs[totalSwabs]=log10(measuredVL);
-		    }
-		    else
-			totSwabs[totalSwabs]=0;
-
 		    if (totalSwabs < MAX_SWABS)
 			totalSwabs++;
 
@@ -3395,7 +3226,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	    }
 	    if (inContEpisode && currentVL<=0)
 	    {
-		cont_episodDur[cont_counter]=time_in_days - cont_First_T;
 		period_episodDur[period_counter]=time_in_days - cont_First_T;
 
 		cont_counter++;
@@ -3483,12 +3313,12 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 			    fprintf(vars->dataF8,"%lf,",Repro[j]);
 			fprintf(vars->dataF8,"\n");
 		    }
-		    if (vars->dataF12 != NULL) {
+		    if (vars->dataF11 != NULL) {
 			unsigned long int tmax = 0;
 			unsigned long int ttot = 0;
 			unsigned long int vemax = 0;
 			unsigned long int vetot = 0;
-			fprintf(vars->dataF12,"%lf,",time_in_days);
+			fprintf(vars->dataF11,"%lf,",time_in_days);
 			for (int j=0; j <vars->Regions; j++)
 			{
 			    if (Tp[j]->val() > tmax)
@@ -3498,30 +3328,30 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 				vemax = Ve[j]->val();
 			    vetot +=Ve[j]->val();
 			}
-			fprintf(vars->dataF12,"%lu",tmax);
-			fprintf(vars->dataF12,",%lu",ttot);
-			fprintf(vars->dataF12,",%lu",vemax);
-			fprintf(vars->dataF12,",%lu",vetot);
-			fprintf(vars->dataF12,",%lf",repro_max);
-			fprintf(vars->dataF12,",%lf",repro_mean);
-			fprintf(vars->dataF12,",%lf",repro_std);
-			fprintf(vars->dataF12,"\n");
+			fprintf(vars->dataF11,"%lu",tmax);
+			fprintf(vars->dataF11,",%lu",ttot);
+			fprintf(vars->dataF11,",%lu",vemax);
+			fprintf(vars->dataF11,",%lu",vetot);
+			fprintf(vars->dataF11,",%lf",repro_max);
+			fprintf(vars->dataF11,",%lf",repro_mean);
+			fprintf(vars->dataF11,",%lf",repro_std);
+			fprintf(vars->dataF11,"\n");
 		    }
-		    if (vars->dataF13 != NULL) 
+		    if (vars->dataF12 != NULL) 
 		    {
-			fprintf(vars->dataF13,"%lf,",time_in_days);
-			fprintf(vars->dataF13,"%d,",model);
-			fprintf(vars->dataF13,"%lf,",bolus);
-			fprintf(vars->dataF13,"%d,",doses);
-			fprintf(vars->dataF13,"%lf,",ACV);
-			fprintf(vars->dataF13,"%lf,",infuse);
-			fprintf(vars->dataF13,"%lf,",lastBolus);
-			fprintf(vars->dataF13,"%lf,",p);
-			fprintf(vars->dataF13,"%lf,",p_ACV);
-			fprintf(vars->dataF13,"%lf,",latent_inf);
-			fprintf(vars->dataF13,"%lf,",latent_inf_ACV);
-			fprintf(vars->dataF13,"%lu",vet);
-			fprintf(vars->dataF13,"\n");
+			fprintf(vars->dataF12,"%lf,",time_in_days);
+			fprintf(vars->dataF12,"%d,",model);
+			fprintf(vars->dataF12,"%lf,",bolus);
+			fprintf(vars->dataF12,"%d,",doses);
+			fprintf(vars->dataF12,"%lf,",ACV);
+			fprintf(vars->dataF12,"%lf,",infuse);
+			fprintf(vars->dataF12,"%lf,",lastBolus);
+			fprintf(vars->dataF12,"%lf,",p);
+			fprintf(vars->dataF12,"%lf,",p_ACV);
+			fprintf(vars->dataF12,"%lf,",latent_inf);
+			fprintf(vars->dataF12,"%lf,",latent_inf_ACV);
+			fprintf(vars->dataF12,"%lu",vet);
+			fprintf(vars->dataF12,"\n");
 		    }
 		}
 
@@ -3538,7 +3368,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	      total_stats_time += tstep;
 	      stats_time += tstep;
 	  }
-	  inEpisode_p = inEpisode;
 
 	  if (time_in_days>100.0  &&
 	      (time_in_days  - (100.0 * (int)(time_in_days/100.0)) <= tstep))
@@ -3560,7 +3389,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	}//end of time simulation
 	if (inContEpisode )
 	{
-	    cont_episodDur[cont_counter]=time_in_days - cont_First_T;
 	    period_episodDur[period_counter]=time_in_days - cont_First_T;
 
 	    cont_counter++;
@@ -3682,28 +3510,20 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	fprintf(results,"CD8 reexpansions per year = %lf\n", cd8_reexpansions*(365./total_stats_time));
 
 	Nr_count++;
-
-	if (vars->AutoSnapshot)
-	    break;
-
     }//end of runs loop
 
     if (totalEpis == 0)
     {
-	if (printCount == vars->Printmax) 
-	{
-		fprintf(results,"No episodes!\n");
-		if (vars->Model > 5)
-		    fprintf(results,
-			"beta=%lf latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf beta_un=%lfe-11 ,absorb=%lf, gamma=%lf,Cmax=%lf,IC50=%lf,m=%lf,time=%lf\n",
-			beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,beta_un*1.0e11,absorb,gamma,Cmax,IC50,m,stats_time);
-		else
-		    fprintf(results,
-			"To=%lf,beta=%lf latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf beta_un=%lfe-11 ,time=%lf\n",
-			vars->To,beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,beta_un*1.0e11,stats_time);
-	}
+	fprintf(results,"No episodes!\n");
+	if (vars->Model > 5)
+	    fprintf(results,
+		"beta=%lf latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf ,absorb=%lf, gamma=%lf,Cmax=%lf,IC50=%lf,m=%lf,time=%lf\n",
+		beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,absorb,gamma,Cmax,IC50,m,stats_time);
+	else
+	    fprintf(results,
+		"To=%lf,beta=%lf latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf ,time=%lf\n",
+		vars->To,beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,stats_time);
 	score = 0.;
-	minCrit1Perc = 0;
     }
     else
     {
@@ -3771,12 +3591,12 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     for(int j=1;j< VL_BINS;j++)
 	totCrit1Perc += crit1perc[j];
 
-    if (printCount == vars->Printmax) fprintf(results,"Total percentage of swabs that were positive= %lf (%d of %d)\n",totCrit1Perc,totalPosSwabs,totalSwabs);
-    if (printCount == vars->Printmax) fprintf(results,"Total percentage of shedder swabs that were positive= %lf (%d of %d)\n",subCrit1Perc,totalPosSwabs,shedderSwabs);
-    if (printCount == vars->Printmax) fprintf(results,"Rate of episodes with >1mm plaques= %lf\n",epi_1mm* (365./total_stats_time));
-    if (printCount == vars->Printmax) fprintf(results,"Percent Time in episodes with >1mm plaques= %lf\n",100.*time_over_1/total_stats_time);
-    if (printCount == vars->Printmax) fprintf(results,"Rate of episodes with >2mm plaques= %lf\n",epi_2mm* (365./total_stats_time));
-    if (printCount == vars->Printmax) fprintf(results,"Percent Time in episodes with >2mm plaques= %lf\n",100.*time_over_2/total_stats_time);
+    fprintf(results,"Total percentage of swabs that were positive= %lf (%d of %d)\n",totCrit1Perc,totalPosSwabs,totalSwabs);
+    fprintf(results,"Total percentage of shedder swabs that were positive= %lf (%d of %d)\n",subCrit1Perc,totalPosSwabs,shedderSwabs);
+    fprintf(results,"Rate of episodes with >1mm plaques= %lf\n",epi_1mm* (365./total_stats_time));
+    fprintf(results,"Percent Time in episodes with >1mm plaques= %lf\n",100.*time_over_1/total_stats_time);
+    fprintf(results,"Rate of episodes with >2mm plaques= %lf\n",epi_2mm* (365./total_stats_time));
+    fprintf(results,"Percent Time in episodes with >2mm plaques= %lf\n",100.*time_over_2/total_stats_time);
 
     /* skip 1st measurement in both targets and actuals*/
     critNum=1;
@@ -3800,34 +3620,34 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 
 	    // 1st bin gets 1.0 weighting!
 	    weight = vars->critWeight[0]/((VL_BINS-1)*mean_mean_1);
-	    if (printCount == vars->Printmax) fprintf(results,"criteria 1[%d]: %lf vs. mean of %lf - err = %lf * %lf * %lf\n",
+	    fprintf(results,"criteria 1[%d]: %lf vs. mean of %lf - err = %lf * %lf * %lf\n",
 		j+1,crit1perc[j], vars->crit[critNum].mean,err,weight,vars->critWeight[0]);
 	    score1+= err*weight;
 	}
 	else 
 	{
-	    if (printCount == vars->Printmax) fprintf(results,"criteria 1[%d]: %lf < %lf < %lf - ",
+	    fprintf(results,"criteria 1[%d]: %lf < %lf < %lf - ",
 		j+1,vars->crit[critNum].low, crit1perc[j], vars->crit[critNum].high);
 	    
 	    if (crit1perc[j] < vars->crit[critNum].low )
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"no\n");
+		fprintf(results,"no\n");
 		score1-= (vars->crit[critNum].low - crit1perc[j])/100.; 
 	    }
 	    else if (crit1perc[j] > vars->crit[critNum].high)
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"no\n");
+		fprintf(results,"no\n");
 		score1-= (crit1perc[j] - vars->crit[critNum].high)/100.; 
 	    }
 	    else
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"yes\n");
+		fprintf(results,"yes\n");
 		score1+=1.0; 
 	    }
 	}
 	critNum++;
     }
-    if (printCount == vars->Printmax) fprintf(results,"Score1 = %lf%s\n",score1,(vars->Crit_mask == 0 || (vars->Crit_mask & 1))?"*":"");
+    fprintf(results,"Score1 = %lf%s\n",score1,(vars->Crit_mask == 0 || (vars->Crit_mask & 1))?"*":"");
 
     if (vars->Crit_mask == 0 || (vars->Crit_mask & 1)) score += score1;
 
@@ -3901,28 +3721,28 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	}
 	else
 	{
-	    if (printCount == vars->Printmax) fprintf(results,"criteria 2[%d]: %lf < %lf < %lf - ",
+	    fprintf(results,"criteria 2[%d]: %lf < %lf < %lf - ",
 		j+1,vars->crit[critNum].low, crit2perc[j], vars->crit[critNum].high);
 	    
 	    if (crit2perc[j] < vars->crit[critNum].low )
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"no\n");
+		fprintf(results,"no\n");
 		score2-= (vars->crit[critNum].low - crit2perc[j])/100.; 
 	    }
 	    else if (crit2perc[j] > vars->crit[critNum].high)
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"no\n");
+		fprintf(results,"no\n");
 		score2-= (crit2perc[j] - vars->crit[critNum].high)/100.; 
 	    }
 	    else
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"yes\n");
+		fprintf(results,"yes\n");
 		score2+=1.0; 
 	    }
 	}
 	critNum++;
     }
-    if (printCount == vars->Printmax) fprintf(results,"Score2 = %lf%s\n",score2,(vars->Crit_mask == 0 || (vars->Crit_mask & 0x2))?"*":"");
+    fprintf(results,"Score2 = %lf%s\n",score2,(vars->Crit_mask == 0 || (vars->Crit_mask & 0x2))?"*":"");
 
     // Criteria 3: Duration category # (6)
     // percentage with longest duration in each of given strata
@@ -3954,7 +3774,6 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	mean_mean_3 = mean_mean_3/DUR_BINS;
     }
 
-    int crit3start = critNum;
     for(int j=0;j< DUR_BINS;j++)
     {
 	if (vars->Match_strategy > 0)
@@ -3970,28 +3789,28 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
 	}
 	else
 	{
-	    if (printCount == vars->Printmax) fprintf(results,"criteria 3[%d]: %lf < %lf < %lf - ",
+	    fprintf(results,"criteria 3[%d]: %lf < %lf < %lf - ",
 		j+1,vars->crit[critNum].low, crit3perc[j], vars->crit[critNum].high);
 	    
 	    if (crit3perc[j] < vars->crit[critNum].low )
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"no\n");
+		fprintf(results,"no\n");
 		score3-= (vars->crit[critNum].low - crit3perc[j])/100.; 
 	    }
 	    else if (crit3perc[j] > vars->crit[critNum].high)
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"no\n");
+		fprintf(results,"no\n");
 		score3-= (crit3perc[j] - vars->crit[critNum].high)/100.; 
 	    }
 	    else
 	    {
-		if (printCount == vars->Printmax) fprintf(results,"yes\n");
+		fprintf(results,"yes\n");
 		score3+=1.0; 
 	    }
 	}
 	critNum++;
     }
-    if (printCount == vars->Printmax) fprintf(results,"Score3 = %lf%s\n",score3,(vars->Crit_mask == 0 || (vars->Crit_mask & 0x4))?"*":"");
+    fprintf(results,"Score3 = %lf%s\n",score3,(vars->Crit_mask == 0 || (vars->Crit_mask & 0x4))?"*":"");
 
     if (vars->Crit_mask == 0 || (vars->Crit_mask & 0x4)) score += score3;
 
@@ -4004,37 +3823,31 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     if (vars->Match_strategy != 0)
 	score = 1.0 / score; /* invert so that low actual score (least squares) is desireable (high)! */
 
-    if (printCount == vars->Printmax) {
+    if (results != stdout)
+	fprintf(stdout,"Total Score = %lf ",score);
+
+    fprintf(results,"Total Score = %lf ",score);
+    if (vars->Model > 5)
+    {
 	if (results != stdout)
-	    fprintf(stdout,"Total Score = %lf ",score);
-
-	fprintf(results,"Total Score = %lf ",score);
-	if (vars->Model > 5)
-	{
-	    if (results != stdout)
-		fprintf(stdout,
-		"beta=%e latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf beta_un=%lfe-11 absorb=%lf gamma=%lf Cmax=%lf IC50=%lf m=%lf time=%lf betae=%e\n",
-		beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,beta_un*1.0e11,absorb,gamma,Cmax,IC50,m,total_stats_time,beta_e);
-	    fprintf(results,
-		"beta=%e latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf beta_un=%lfe-11 absorb=%lf gamma=%lf Cmax=%lf IC50=%lf m=%lf time=%lf betae=%e\n",
-		beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,beta_un*1.0e11,absorb,gamma,Cmax,IC50,m,total_stats_time,beta_e);
-	}
-	else
-	{
-	    if (results != stdout)
-		fprintf(stdout,
-		"beta=%e latent_inf=%lf log_p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf fpos=%lf an=%lf cd8_ic50=%lf kappa=%lf alpha=%lf exp_days=%lf hill=%lf time=%lf betae=%e\n",
-		vars->beta_init,vars->latent_inf_init,vars->log_p_init,vars->c_init,vars->theta_init,vars->delta_init,vars->r_init,vars->inf_init,vars->rinf_init,vars->rho_init,vars->eclipse_init,vars->fpos,vars->an,vars->cd8_ic50_init,vars->kappa_init,vars->alpha_init,vars->exp_days_init,vars->hill,total_stats_time,beta_e);
-
-	    fprintf(results,
-		"beta=%e latent_inf=%lf log_p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf fpos=%lf an=%lf cd8_ic50=%lf kappa=%lf alpha=%lf exp_days=%lf hill=%lf time=%lf betae=%e\n",
-		vars->beta_init,vars->latent_inf_init,vars->log_p_init,vars->c_init,vars->theta_init,vars->delta_init,vars->r_init,vars->inf_init,vars->rinf_init,vars->rho_init,vars->eclipse_init,vars->fpos,vars->an,vars->cd8_ic50_init,vars->kappa_init,vars->alpha_init,vars->exp_days_init,vars->hill,total_stats_time,beta_e);
-	}
-	/* reset printCount */
-	printCount = 1;
+	    fprintf(stdout,
+	    "beta=%e latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf absorb=%lf gamma=%lf Cmax=%lf IC50=%lf m=%lf time=%lf betae=%e\n",
+	    beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,absorb,gamma,Cmax,IC50,m,total_stats_time,beta_e);
+	fprintf(results,
+	    "beta=%e latent_inf=%lf p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf absorb=%lf gamma=%lf Cmax=%lf IC50=%lf m=%lf time=%lf betae=%e\n",
+	    beta,latent_inf,p,c,theta,delta,r,inf,rinf,rho,eclipse,absorb,gamma,Cmax,IC50,m,total_stats_time,beta_e);
     }
     else
-	printCount++;
+    {
+	if (results != stdout)
+	    fprintf(stdout,
+	    "beta=%e latent_inf=%lf log_p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf fpos=%lf an=%lf cd8_ic50=%lf kappa=%lf alpha=%lf exp_days=%lf hill=%lf time=%lf betae=%e\n",
+	    vars->beta_init,vars->latent_inf_init,vars->log_p_init,vars->c_init,vars->theta_init,vars->delta_init,vars->r_init,vars->inf_init,vars->rinf_init,vars->rho_init,vars->eclipse_init,vars->fpos,vars->an,vars->cd8_ic50_init,vars->kappa_init,vars->alpha_init,vars->exp_days_init,vars->hill,total_stats_time,beta_e);
+
+	fprintf(results,
+	    "beta=%e latent_inf=%lf log_p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf fpos=%lf an=%lf cd8_ic50=%lf kappa=%lf alpha=%lf exp_days=%lf hill=%lf time=%lf betae=%e\n",
+	    vars->beta_init,vars->latent_inf_init,vars->log_p_init,vars->c_init,vars->theta_init,vars->delta_init,vars->r_init,vars->inf_init,vars->rinf_init,vars->rho_init,vars->eclipse_init,vars->fpos,vars->an,vars->cd8_ic50_init,vars->kappa_init,vars->alpha_init,vars->exp_days_init,vars->hill,total_stats_time,beta_e);
+    }
 
     fprintf(results,"Final percentage of swabs that were positive= %lf\n",totCrit1Perc);
     fprintf(results,"Shedders percentage of swabs that were positive= %lf\n",subCrit1Perc);
@@ -4047,60 +3860,11 @@ double ScoreFunction(int *valid, gsl_vector *ParamVector,
     return score;	 /* return score for last patient (if multiple ones) */
 }
 
-/* This function runs one simulation.  It is the entry point when 
- * the program is run in the non-batch mode */
-int runSimulation ( globalState *vars)
+double fitmodel(globalState *vars)
 {
-    gsl_vector *params;
-
-    int valid=0;
-
-    double score=0;
-
-    params = gsl_vector_alloc(NUM_PARAMS);
-
-    gsl_vector_set(params,0,vars->beta_init); 
-    gsl_vector_set(params,1,vars->latent_inf_init); 
-    gsl_vector_set(params,2,vars->log_p_init); 
-    gsl_vector_set(params,3,vars->c_init); 
-    gsl_vector_set(params,4,vars->theta_init); 
-    gsl_vector_set(params,5,vars->inf_init); 
-    gsl_vector_set(params,6,vars->r_init); 
-    gsl_vector_set(params,7,vars->rinf_init); 
-    gsl_vector_set(params,8,vars->delta_init); 
-    gsl_vector_set(params,9,vars->betae_init); 
-    gsl_vector_set(params,10,vars->rho_init); 
-    gsl_vector_set(params,11,vars->eclipse_init); 
-    gsl_vector_set(params,12,vars->log_betaun_init); 
-
-    if (vars->Model >= 5)
-    {
-	gsl_vector_set(params,13,vars->Cmax_init); 
-	gsl_vector_set(params,14,vars->IC50_init); 
-	gsl_vector_set(params,15,vars->m_init); 
-	gsl_vector_set(params,16,vars->gamma_init); 
-	gsl_vector_set(params,17,vars->absorb_init); 
-    }
-
-    score=ScoreFunction(&valid, params, (void *)vars,NULL);
-
-    gsl_vector_free(params);
-
-    return valid;
-}
-
-double fitmodel(gsl_vector *params, globalState *vars)
-{
-    gsl_vector *low_bound,*high_bound;
-
     double score;
 
     int valid=0;
-    int param_count;
-
-    param_count=NUM_PARAMS;
-    low_bound=gsl_vector_alloc(param_count);
-    high_bound=gsl_vector_alloc(param_count);
 
     if (vars->PDF_on)
     {
@@ -4234,111 +3998,10 @@ double fitmodel(gsl_vector *params, globalState *vars)
 	    }
     }
 
-    /* bounds for beta */
-    gsl_vector_set(params,0,vars->beta_init); 
-    gsl_vector_set(low_bound,0,vars->beta_low); 
-    gsl_vector_set(high_bound,0,vars->beta_high); 
+    vars->hex_time_bias = 0;
+    vars->sample_index = 0;
 
-    /* bounds for latent_inf */
-    gsl_vector_set(params,1,vars->latent_inf_init); 
-    gsl_vector_set(low_bound,1,vars->latent_inf_low); 
-    gsl_vector_set(high_bound,1,vars->latent_inf_high); 
-
-    /* bounds for p */
-    gsl_vector_set(params,2,vars->log_p_init); 
-    gsl_vector_set(low_bound,2,vars->log_p_low); 
-    gsl_vector_set(high_bound,2,vars->log_p_high); 
-
-    /* bounds for c */
-    gsl_vector_set(params,3,vars->c_init); 
-    gsl_vector_set(low_bound,3,vars->c_low); 
-    gsl_vector_set(high_bound,3,vars->c_high); 
-
-    /* bounds for theta */
-    gsl_vector_set(params,4,vars->theta_init); 
-    gsl_vector_set(low_bound,4,vars->theta_low); 
-    gsl_vector_set(high_bound,4,vars->theta_high); 
-
-    /* bounds for inf */
-    gsl_vector_set(params,5,vars->inf_init); 
-    gsl_vector_set(low_bound,5,vars->inf_low); 
-    gsl_vector_set(high_bound,5,vars->inf_high); 
-
-    /* bounds for r */
-    gsl_vector_set(params,6,vars->r_init); 
-    gsl_vector_set(low_bound,6,vars->r_low); 
-    gsl_vector_set(high_bound,6,vars->r_high); 
-
-    /* bounds for rinf */
-    gsl_vector_set(params,7,vars->rinf_init); 
-    gsl_vector_set(low_bound,7,vars->rinf_low); 
-    gsl_vector_set(high_bound,7,vars->rinf_high); 
-
-    /* bounds for delta */
-    gsl_vector_set(params,8,vars->delta_init); 
-    gsl_vector_set(low_bound,8,vars->delta_low); 
-    gsl_vector_set(high_bound,8,vars->delta_high); 
-
-    /* bounds for rho */
-    gsl_vector_set(params,10,vars->rho_init); 
-    gsl_vector_set(low_bound,10,vars->rho_low); 
-    gsl_vector_set(high_bound,10,vars->rho_high); 
-
-    /* bounds for eclipse */
-    gsl_vector_set(params,11,vars->eclipse_init); 
-    gsl_vector_set(low_bound,11,vars->eclipse_low); 
-    gsl_vector_set(high_bound,11,vars->eclipse_high); 
-
-    /* bounds for betaun */
-    gsl_vector_set(params,12,vars->log_betaun_init); 
-    gsl_vector_set(low_bound,12,vars->log_betaun_low); 
-    gsl_vector_set(high_bound,12,vars->log_betaun_high); 
-
-    if (vars->Model >= 5)
-    {
-	/* bounds for Cmax */
-	gsl_vector_set(params,13,vars->Cmax_init); 
-	gsl_vector_set(low_bound,13,vars->Cmax_low); 
-	gsl_vector_set(high_bound,13,vars->Cmax_high); 
-
-	/* bounds for IC50 */
-	gsl_vector_set(params,14,vars->IC50_init); 
-	gsl_vector_set(low_bound,14,vars->IC50_low); 
-	gsl_vector_set(high_bound,14,vars->IC50_high); 
-
-	/* bounds for m */
-	gsl_vector_set(params,15,vars->m_init); 
-	gsl_vector_set(low_bound,15,vars->m_low); 
-	gsl_vector_set(high_bound,15,vars->m_high); 
-
-	/* bounds for gamma */
-	gsl_vector_set(params,16,vars->gamma_init); 
-	gsl_vector_set(low_bound,16,vars->gamma_low); 
-	gsl_vector_set(high_bound,16,vars->gamma_high); 
-
-	/* bounds for absorb */
-	gsl_vector_set(params,17,vars->absorb_init); 
-	gsl_vector_set(low_bound,17,vars->absorb_low); 
-	gsl_vector_set(high_bound,17,vars->absorb_high); 
-    }
-
-    if (vars->Fit_model > 0)
-    {
-	zoomin(ScoreFunction,vars->ur,params,&score,
-	  low_bound,high_bound, vars->Param_mask,param_count,
-	  vars->Max_steps,vars->Stop_walk,vars->Bvstop_walk,
-	  (int)(vars->Printmax>0),vars->Tolerance,(void *)vars,vars->Threading,vars->Search_order);
-    }
-    else
-    {
-	vars->hex_time_bias = 0;
-	vars->sample_index = 0;
-
-	score=ScoreFunction(&valid, params, (void *)vars,NULL);
-    }
-
-    gsl_vector_free(low_bound);
-    gsl_vector_free(high_bound);
+    score=ScoreFunction(&valid, (void *)vars,NULL);
 
     return score;
 }
@@ -4354,7 +4017,7 @@ void usage(char *prog_name)
     fprintf(stderr,"\t\tFormat: target lower and upper CIs and mean values for...\n");
     fprintf(stderr,"\t\t\t cumul percent pos swabs (9 bins)\n");
     fprintf(stderr,"\t\t\t peak log VL histograms (8 bins)\n");
-    fprintf(stderr,"\t-w <write_mask> = which output (csv) files to generate (Bit-mask 1-13)\n");
+    fprintf(stderr,"\t-w <write_mask> = which output (csv) files to generate (Bit-mask 1 shifted by 1-12)\n");
     fprintf(stderr,"\t\t1= cumul & regional ve vs time\n");
     fprintf(stderr,"\t\t2= ve current episode episode\n");
     fprintf(stderr,"\t\t3= cumul & regional vi vs time\n");
@@ -4363,10 +4026,9 @@ void usage(char *prog_name)
     fprintf(stderr,"\t\t6= inf cells current episode episode\n");
     fprintf(stderr,"\t\t8= regional R0s vs time\n");
     fprintf(stderr,"\t\t9= run stats (per run)\n");
-    fprintf(stderr,"\t\t10= transmission info\n");
-    fprintf(stderr,"\t\t11= episode stats (per run)\n");
-    fprintf(stderr,"\t\t12= more detailed regional info\n");
-    fprintf(stderr,"\t\t13= ACV dosing info\n");
+    fprintf(stderr,"\t\t10= episode stats (per run)\n");
+    fprintf(stderr,"\t\t11= more detailed regional info\n");
+    fprintf(stderr,"\t\t12= ACV dosing info\n");
     fprintf(stderr,"\t-d = deterministic mode (no distributional draws)\n");
     fprintf(stderr,"\t-n = change the size of the hive (max = 1000)\n");
     fprintf(stderr,"\t-W = change weighting of a scoring criteria\n");
@@ -4389,12 +4051,10 @@ int main(int argc, char *argv[])
     char dat_file10[] = "hhv8_sim.dat10";
     char dat_file11[] = "hhv8_sim.dat11";
     char dat_file12[] = "hhv8_sim.dat12";
-    char dat_file13[] = "hhv8_sim.dat13";
 
     char criteria_file[] = "hhv8_sim.crit";
     char *crit_file;
 
-    FILE *out;
     outDir = &def_outp_dir[0];
 
 
@@ -4419,8 +4079,6 @@ int main(int argc, char *argv[])
 
     int Ncrit = NUM_CRITERIA;
 
-    batchMode = 0;
-
     stoch = 1;
     int writeData = 0;
     int writeMask = 0;
@@ -4429,7 +4087,6 @@ int main(int argc, char *argv[])
     double crit_weight = 0;
 
     double best;
-    gsl_vector *params;
 
     hexcell *the_cells[MAX_HEXCELLS];
     int next_available = 1;
@@ -4439,9 +4096,6 @@ int main(int argc, char *argv[])
 
     for(int i = 0; i < argc; i++) {
 	cout << "argv[" << i << "] = " << argv[i] << endl;
-	if (!strcmp(argv[i],"-b") || !strcmp(argv[i],"-B")) {
-	    batchMode = 1;
-	}
 	if (!strcmp(argv[i],"-h") || !strcmp(argv[i],"-H")) {
 	    usage(argv[0]);
 	    exit(0);
@@ -4578,12 +4232,10 @@ int main(int argc, char *argv[])
     settings.dataF10 = NULL;
     settings.dataF11 = NULL;
     settings.dataF12 = NULL;
-    settings.dataF13 = NULL;
 
     if (writeData) {
 
-	if (batchMode != 0)
-	    settings.writeOn = 1;
+	settings.writeOn = 1;
 
 	if(((writeMask & 1) && ((settings.dataF1 = fopen(dat_file1,"wt")) == NULL))){
 	    cerr << "Could not open data file "<<dat_file1<<"\n";
@@ -4633,32 +4285,13 @@ int main(int argc, char *argv[])
 	    cerr << "Could not open data file "<<dat_file12<<"\n";
 	    exit(1);
 	}
-	if(((writeMask & (1<<12)) && ((settings.dataF13 = fopen(dat_file13,"wt")) == NULL))){
-	    cerr << "Could not open data file "<<dat_file13<<"\n";
-	    exit(1);
-	}
     }
 
-    params=gsl_vector_alloc(NUM_PARAMS);
-
-    best =fitmodel(params, &settings);
+    best =fitmodel(&settings);
 
     if (settings.Verbose)
     {
 	fprintf(stderr,"Final score = %lf for the following values...\n\n",best);
-	fprintf(stderr,"beta = %g\n",gsl_vector_get(params,0));
-	fprintf(stderr,"betae = %g\n",gsl_vector_get(params,9));
-	fprintf(stderr,"latent_inf = %g\n",gsl_vector_get(params,2));
-	fprintf(stderr,"p = %g\n",gsl_vector_get(params,2));
-	fprintf(stderr,"c = %g\n",gsl_vector_get(params,3));
-	fprintf(stderr,"theta = %g\n",gsl_vector_get(params,4));
-	fprintf(stderr,"inf = %g\n",gsl_vector_get(params,5));
-	fprintf(stderr,"r = %g\n",gsl_vector_get(params,6));
-	fprintf(stderr,"rinf = %g\n",gsl_vector_get(params,7));
-	fprintf(stderr,"delta = %g\n",gsl_vector_get(params,8));
-	fprintf(stderr,"beta_e = %g\n",gsl_vector_get(params,9));
-	fprintf(stderr,"rho = %g\n",gsl_vector_get(params,10));
-	fprintf(stderr,"eclipse = %g\n",gsl_vector_get(params,11));
     }
 
     //free memory from the random number generator
@@ -4679,7 +4312,6 @@ int main(int argc, char *argv[])
 	if(settings.dataF10 != NULL) fclose(settings.dataF10);
 	if(settings.dataF11 != NULL) fclose(settings.dataF11);
 	if(settings.dataF12 != NULL) fclose(settings.dataF12);
-	if(settings.dataF13 != NULL) fclose(settings.dataF13);
     }
 
 

@@ -53,56 +53,28 @@ class globalState {
 	double exp_days_mean;
 	double exp_days_std;
 	double beta_init;
-	double beta_low;
-	double beta_high;
 	double betae_init;
-	double betae_low;
-	double betae_high;
 	double log_p_init;
 	double log_p_low;
 	double log_p_high;
 	double latent_inf_init;
-	double latent_inf_low;
-	double latent_inf_high;
 	double theta_init;
-	double theta_low;
-	double theta_high;
 	double alpha_init;
-	double alpha_low;
-	double alpha_high;
 	double alpha_mean;
 	double alpha_std;
 	double kappa_init;
-	double kappa_low;
-	double kappa_high;
 	double kappa_mean;
 	double kappa_std;
 	double r_init;
-	double r_low;
-	double r_high;
 	double cd8_ic50_mean;
 	double cd8_ic50_init;
-	double cd8_ic50_low;
-	double cd8_ic50_high;
 	double cd8_ic50_std;
 	double delta_init;
-	double delta_low;
-	double delta_high;
 	double c_init;
-	double c_low;
-	double c_high;
 	double inf_init;
-	double inf_low;
-	double inf_high;
 	double rinf_init;
-	double rinf_low;
-	double rinf_high;
 	double rho_init;
-	double rho_low;
-	double rho_high;
 	double eclipse_init;
-	double eclipse_low;
-	double eclipse_high;
 	double db;
 	double an;
 	double fpos;
@@ -112,7 +84,6 @@ class globalState {
 	double hill_std;
 	double swabInterval;
 	double statInterval;
-	double SnapshotInterval;
 	double To_mean;
 	double To_std;
 	double beta_mean;
@@ -148,11 +119,6 @@ class globalState {
 	int gamma_hrs;
 	int absorb_hrs;
 
-	/* transmission model variables */
-	double log_betaun_init;
-	double log_betaun_low;
-	double log_betaun_high;
-
 	/* model 6 & 7 vars */
 	double gamma_init;
 	double gamma_low;
@@ -166,13 +132,9 @@ class globalState {
 	double absorb_mean;
 	double absorb_std;
 	double Cmax_init;
-	double Cmax_low;
-	double Cmax_high;
 	double Cmax_mean;
 	double Cmax_std;
 	double IC50_init;
-	double IC50_low;
-	double IC50_high;
 	double IC50_mean;
 	double IC50_std;
 	double m_init;
@@ -201,25 +163,15 @@ class globalState {
 	int Total_doses;
 	int infThreshold;
 
-	int Param_mask;
-	int Stop_walk;
-	int Bvstop_walk;
-	int Max_steps;
-	int Printmax;
 	int Episode_limit;
 	int Sig_test;
-	int AutoSnapshot;
 
-	double Tolerance;
 	double Size_limit;
 	double Input_refresh;
 
 	char *inp_file;
 	char *alt_inp_file;
 
-	int Threading;
-	int Fit_model;
-	int Rand_start;
 	int Calc_T0;
 
 	int Model;
