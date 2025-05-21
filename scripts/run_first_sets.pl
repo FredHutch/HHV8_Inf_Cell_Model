@@ -84,12 +84,10 @@ my $range_log_latent_inf= $high_log_latent_inf-$low_log_latent_inf;
 #my $high_expand_days=20;
 #my $range_expand_days= $high_expand_days-$low_expand_days;
 
-# Models (1-5)
-#1.Allow latency release rate & immune cell killing rate to vary
-#2.Allow beta, latency release rate & immune cell killing rate to vary
-#3.Allow latency release rate & infected cell death rate to vary
-#4.Allow beta, latency release rate & infected cell death rate to vary
-#5.Allow beta, immune cell killing rate, pi, r, latency release rate & infected cell death rate to vary
+# Models (1-3)
+#1. Cells are the infectious agents (rather than the virus they produce)
+#2. Extra-cellular virus within a region is the infectious agent
+#3. Virus both within and across regions can infect cells within a region
 
 while ( $count > 0 ){
     print "$count runs remaining\n";
