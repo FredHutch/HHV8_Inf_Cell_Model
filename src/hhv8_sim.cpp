@@ -57,10 +57,6 @@
 using namespace std;
 
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
-#define DEFAULT_WIDTH  800
-#define DEFAULT_HEIGHT 600
-#define DEFAULT_IMAGE_WIDTH  816
-#define DEFAULT_IMAGE_HEIGHT 592
 #ifdef __sun
 #define DEFAULT_TITLE  "HHV8 simulation (for SunOS)"
 #else
@@ -3419,8 +3415,8 @@ double ScoreFunction(int *valid,
 
 	    counter++;
 	}
-	fprintf(results, "Run %d completed in %lf days with %g positive swabs (max episode = %lf days)\n", 
-		Nr_count, time_in_days, totalPosSwabs/(float)totalSwabs,max_dur);
+	fprintf(results, "Run %d completed in %lf days with %g positive swabs (max episode = %lf days, total log AUC=%lf)\n", 
+		Nr_count, time_in_days, totalPosSwabs/(float)totalSwabs,max_dur,total_AUC);
 	fprintf(results,
 		"beta=%e latent_inf=%lf log_p=%lf c=%lf theta=%lf delta=%lf r=%lf inf=%lf rinf=%lf rho=%lf eclipse=%lf fpos=%lf an=%lf cd8_ic50=%lf kappa=%lf alpha=%lf exp_days=%lf hill=%lf betae=%e\n",
 		vars->beta_init,vars->latent_inf_init,vars->log_p_init,vars->c_init,vars->theta_init,vars->delta_init,vars->r_init,vars->inf_init,vars->rinf_init,vars->rho_init,vars->eclipse_init,vars->fpos,vars->an,vars->cd8_ic50_init,vars->kappa_init,vars->alpha_init,vars->exp_days_init,vars->hill,vars->betae_init);
