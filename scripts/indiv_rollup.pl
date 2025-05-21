@@ -185,7 +185,7 @@ my $peak_hhv8_target=$pieces[3];
 printf STDERR ("Shedding target = %g\n",$shedding);
 printf STDERR ("Median HHV8 target = %g\n",$med_hhv8_target);
 printf STDERR ("Variance HHV8 target = %g\n",$var_hhv8_target);
-printf STDERR ("Peak HHV8 target = %g\n",$var_hhv8_target);
+printf STDERR ("Peak HHV8 target = %g\n",$peak_hhv8_target);
 close(CRIT2);
 
 open(TXT,"<$txtfile") || die " Could not open input file $txtfile!\n";
