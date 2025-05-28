@@ -1,0 +1,79 @@
+Prerequisites:
+
+1. Access to rhino machines and the project sources
+
+   - ask scientific computing for an account 
+
+   - login to rhion01 or an equivalent machine
+
+   - get the sources using the command: "git clone https://github.com/FredHutch/HSV1_In_Vitro_ABM.git"
+	
+2. Access to correct executable & libraries
+	
+   - In the Linux directory, type ". setup_env.sh"
+
+   - sets correct "Rscript", gsl libraries and paths to mencopy and libpng.o
+
+Making the hhv8_sim executable
+
+1. cd to the "Linux" directory (or OSX if on a MAC)
+
+2. "make" the simulation executable ("make hhv8_sim")
+
+Running the initial set of simulations for fitting
+
+1. Run the run_init_sims.sh script from the scripts sub-directory (run in the Linux directory)
+
+   (I like using "nohup" so the script can run in background even if I logout)
+
+   - ex. nohup ../scripts/run_init_sims.sh 1 dswan 10000 2>&1 > init_1.log &
+
+   - where the arguments are 
+	1. The model number (1-4)
+	2. your username for launching and statusing batch jobs
+	3. the number of parameter combinations to run
+
+2. Run the run_all_ptids.sh script to pick the top fits iteratively for each subject
+
+   - ex. nohup ../scripts/run_all_ptids.sh 1 dswan 1000 `cat ../inputs/all_ptids.txt` 2>&1 > all_sims_1.log & 
+
+   - where the arguments are 
+	1. The model number (1-4)
+	2. your username for launching and statusing batch jobs
+	3. the number of parameter combinations to run
+	4...<n> A list of PTIDs (Here I just use the contents of the whole all_ptids.txt file in the inputs directory)
+
+    Note: you can watch the output file "ptid_runs.log" to see when this has finished
+
+3. To sum up average of the top 10 scores across all participants for a model using the following commands:
+
+    - ex. ../scripts/score_model.sh 1 `cat ../inputs/all_ptids.txt` > temp_scores.txt 
+	  ../scripts/show_model_avg.sh 1 temp_scores.txt
+
+4. To determining the correlation coefficients 
+
+    A. Run using the best parameter set for all PTIDs with the follwoing:
+
+   - ex. nohup ../scripts/rerun_all_ptids.sh 1 `cat ../inputs/all_ptids.txt` 2>&1 > rerun1.log &
+
+   - where the arguments are 
+	1. The model number (1-4)
+	2...<n> A list of PTIDs (Here I just use the contents of the whole all_ptids.txt file in the inputs directory)
+
+    B. Run the R script sim_act_correl.R to determine the coefficients and generate the plots
+
+    - ex. Rscript ../scripts/sim_act_correl.R ../inputs/all_ptids.txt cell_to_cell 1 
+
+    - where the arguments are 
+	1. The R script
+	2. A file containing a list of PTIDs 
+	3. A tag to use when creating the output filenames (ex. model_1_hhv8_peak_cell_to_cell.pdf)
+	4. The model number (1-4)
+
+NOTE: As a reminder the 4 supported "models" are:
+
+	1. Cell-to-cell spread (infectious cells)
+	2. Viral spread (infectious cell-associated virus)
+	3. Viral spread (infectious cell-associated & extra-cellular virus) w/ inter-regional spread
+	4. Cell-to-cell spread (same as 1 but with just 1 region)
+
