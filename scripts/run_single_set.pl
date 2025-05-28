@@ -43,10 +43,10 @@ if ( -f $ARGV[2]) {
     exit (1);
 }
 
-if ( $ARGV[3] =~ /^[123]/) {
+if ( $ARGV[3] =~ /^[1234]/) {
     $model=$ARGV[3]
 } else {
-    die "4th arg is the number of the model (1-3)\n";
+    die "4th arg is the number of the model (1-4)\n";
     exit (1);
 }
 
@@ -156,17 +156,20 @@ while ( $count > 0 ){
     open (TSTFILE, ">>$infile");
     printf TSTFILE ("PDF_on 0\n");
     my $beta= randn($mean_beta,$stddev_beta);
-    if ( $model == 1 ) {
+    if ( $model == 1  || $model == 4) {
 	printf TSTFILE ("infect_by_virus 0\n");
 	printf TSTFILE ("beta_init %g\n",$beta);
     }
-    if ( $model > 1 ) {
+    if ( $model ==2 || $model == 3 ) {
 	printf TSTFILE ("infect_by_virus 1\n");
 	printf TSTFILE ("beta_init %e\n",$beta);
     }
     if ( $model == 3 ){
 	my $betae= randn($mean_betae,$stddev_betae);
 	printf TSTFILE ("betae_init %e\n",$betae);
+    }
+    if ( $model == 4 ){
+	printf TSTFILE ("Regions 1\n");
     }
     my $fpos= randn($mean_fpos,$stddev_fpos);
     printf TSTFILE ("fpos %g\n",$fpos);

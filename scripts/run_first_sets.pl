@@ -27,10 +27,10 @@ if ( -f $ARGV[2]) {
     die "3rd arg is the criteria file\n";
     exit (1);
 }
-if ( $ARGV[3] =~ /^[123]/) {
+if ( $ARGV[3] =~ /^[1234]/) {
     $model=$ARGV[3]
 } else {
-    die "4th arg is the number of the model (1-3)\n";
+    die "4th arg is the number of the model (1-4)\n";
     exit (1);
 }
 #an 0.5-2.5
@@ -106,13 +106,16 @@ while ( $count > 0 ){
 
     open (TSTFILE, ">>$infile");
     printf TSTFILE ("PDF_on 0\n");
-    if ( $model > 1 ) {
+    if ( $model != 1 && $model != 4 ) {
 	printf TSTFILE ("infect_by_virus 1\n");
 	printf TSTFILE ("beta_init %e\n",$vbeta);
     }
-    if ( $model == 1) {
+    if ( $model == 1 || $model == 4) {
 	printf TSTFILE ("infect_by_virus 0\n");
 	printf TSTFILE ("beta_init %g\n",$beta);
+    }
+    if ( $model == 4) {
+	printf TSTFILE ("Regions 1\n");
     }
     if ( $model == 3) {
 	printf TSTFILE ("betae_init %e\n",$vbetae);
